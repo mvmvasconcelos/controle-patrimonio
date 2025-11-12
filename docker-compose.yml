@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  flutter:
+    build: .
+    container_name: controle-patrimonio-flutter
+    working_dir: /app
+    volumes:
+      - ./:/app:cached
+      - gradle_cache:/root/.gradle
+      - pub_cache:/root/.pub-cache
+      - android_sdk:/opt/android-sdk
+    ports:
+      - "8090:8090"
+    environment:
+      TERM: xterm
+      ANDROID_HOME: /opt/android-sdk
+    stdin_open: true
+    tty: true
+    # Manter container vivo para execução de comandos
+    command: ["sh", "-c", "tail -f /dev/null"]
+
+volumes:
+  gradle_cache:
+  pub_cache:
+  android_sdk:

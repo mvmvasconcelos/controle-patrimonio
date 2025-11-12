@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download APK - Controle Patrimônio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 40px;
+        }
+        
+        h1 {
+            color: #2d3748;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #718096;
+            font-size: 16px;
+            margin-bottom: 30px;
+        }
+        
+        .version-info {
+            background: #f7fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .version-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .version-item:last-child {
+            border-bottom: none;
+        }
+        
+        .version-label {
+            color: #718096;
+            font-weight: 500;
+        }
+        
+        .version-value {
+            color: #2d3748;
+            font-weight: 600;
+        }
+        
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 32px;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 12px;
+            display: inline-block;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .download-btn:active {
+            transform: translateY(0);
+        }
+        
+        .instructions {
+            margin-top: 30px;
+            text-align: left;
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .instructions h3 {
+            color: #92400e;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            color: #78350f;
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">📱</div>
+        <h1>Controle Patrimônio</h1>
+        <p class="subtitle">Download do Aplicativo Android</p>
+        
+        <div class="version-info" id="versionInfo">
+            <div class="version-item">
+                <span class="version-label">Versão:</span>
+                <span class="version-value" id="version">Carregando...</span>
+            </div>
+            <div class="version-item">
+                <span class="version-label">Build:</span>
+                <span class="version-value" id="build">-</span>
+            </div>
+            <div class="version-item">
+                <span class="version-label">Data:</span>
+                <span class="version-value" id="date">-</span>
+            </div>
+            <div class="version-item">
+                <span class="version-label">Tamanho:</span>
+                <span class="version-value" id="size">-</span>
+            </div>
+        </div>
+        
+        <a href="apk/controle-patrimonio.apk" class="download-btn" id="downloadBtn">
+            📥 Baixar APK
+        </a>
+        
+        <div class="instructions">
+            <h3>⚠️ Instruções de Instalação</h3>
+            <ol>
+                <li>Clique no botão acima para baixar o APK</li>
+                <li>Nas configurações do Android, habilite "Fontes desconhecidas"</li>
+                <li>Abra o arquivo APK baixado</li>
+                <li>Toque em "Instalar" e aguarde</li>
+                <li>Conceda as permissões necessárias quando solicitado</li>
+            </ol>
+        </div>
+    </div>
+    
+    <script>
+        // Carregar informações da versão
+        fetch('version.json')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('version').textContent = data.version;
+                document.getElementById('build').textContent = data.buildNumber;
+                document.getElementById('date').textContent = data.releaseDate;
+                document.getElementById('size').textContent = data.size;
+            })
+            .catch(err => {
+                console.error('Erro ao carregar version.json:', err);
+            });
+    </script>
+</body>
+</html>
