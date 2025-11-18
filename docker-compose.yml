@@ -20,7 +20,21 @@ services:
     # Manter container vivo para execução de comandos
     command: ["sh", "-c", "tail -f /dev/null"]
 
+  backend:
+    build: ./backend
+    container_name: controle-patrimonio-backend
+    working_dir: /backend
+    volumes:
+      - ./backend:/backend
+      - backend_data:/backend/data
+    ports:
+      - "6090:8000"
+    environment:
+      PYTHONUNBUFFERED: 1
+    restart: unless-stopped
+
 volumes:
   gradle_cache:
   pub_cache:
   android_sdk:
+  backend_data:

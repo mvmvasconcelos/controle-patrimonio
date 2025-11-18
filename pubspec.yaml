@@ -21,6 +21,13 @@ dependencies:
   shared_preferences: ^2.2.2
   path_provider: ^2.1.1
   
+  # Local database
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  
+  # Barcode scanner
+  mobile_scanner: ^3.5.6
+  
   # File handling & installation
   open_filex: ^4.3.4
   permission_handler: ^10.4.5
@@ -34,6 +41,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+  build_runner: ^2.4.6
+  hive_generator: ^2.0.1
 
 flutter:
   uses-material-design: true

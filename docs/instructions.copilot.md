@@ -1,1 +1,0 @@
-/home/ifsul/docs/instructions.copilot.md

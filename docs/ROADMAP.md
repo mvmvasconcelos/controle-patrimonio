@@ -14,14 +14,14 @@ O app funcionará como uma "prancheta digital", permitindo ao usuário escanear 
 
 **Objetivo:** Configurar o backend e a base de dados para suportar o sistema.
 
--   [ ] **1.1. Backend FastAPI + SQLite**
-    -   [ ] **1.1.1.** Configurar o servidor em `128.1.1.49`
-    -   [ ] **1.1.2.** Criar tabela `patrimonio` com as colunas do SUAP
-    -   [ ] **1.1.3.** Implementar endpoint `GET /patrimonio` para o app baixar a base de dados completa para uso offline
-    -   [ ] **1.1.4.** Implementar endpoint `POST /patrimonio/update` para receber e salvar as alterações feitas no app
+-   [x] **1.1. Backend FastAPI + SQLite**
+    -   [x] **1.1.1.** Configurar o servidor em `128.1.1.49`
+    -   [x] **1.1.2.** Criar tabela `patrimonio` com as colunas do SUAP
+    -   [x] **1.1.3.** Implementar endpoint `GET /patrimonio` para o app baixar a base de dados completa para uso offline
+    -   [x] **1.1.4.** Implementar endpoint `POST /patrimonio/update` para receber e salvar as alterações feitas no app
 
--   [ ] **1.2. Script Inicial de Carga**
-    -   [ ] **1.2.1.** Desenvolver script para importação inicial do CSV do SUAP para o banco de dados SQLite do servidor
+-   [x] **1.2. Script Inicial de Carga**
+    -   [x] **1.2.1.** Desenvolver script para importação inicial do CSV do SUAP para o banco de dados SQLite do servidor
 
 ---
 
@@ -29,13 +29,13 @@ O app funcionará como uma "prancheta digital", permitindo ao usuário escanear 
 
 **Objetivo:** Criar a estrutura fundamental do app com armazenamento offline.
 
--   [ ] **2.1. Configuração do Banco de Dados Local**
-    -   [ ] **2.1.1.** Implementar banco de dados local (Hive) para armazenar os dados do patrimônio
-    -   [ ] **2.1.2.** Garantir funcionamento 100% offline do aplicativo
+-   [x] **2.1. Configuração do Banco de Dados Local**
+    -   [x] **2.1.1.** Implementar banco de dados local (Hive) para armazenar os dados do patrimônio
+    -   [x] **2.1.2.** Garantir funcionamento 100% offline do aplicativo
 
--   [ ] **2.2. Tela Principal**
-    -   [ ] **2.2.1.** Criar tela principal com dois botões: **"Escaneamento Individual"** e **"Escaneamento em Lotes"**
-    -   [ ] **2.2.2.** Implementar popup "Deseja informar qual é a sala?" com `input select` antes de iniciar o scanner
+-   [x] **2.2. Tela Principal**
+    -   [x] **2.2.1.** Criar tela principal com dois botões: **"Escaneamento Individual"** e **"Escaneamento em Lotes"**
+    -   [x] **2.2.2.** Implementar popup "Deseja informar qual é a sala?" com `input select` antes de iniciar o scanner
 
 ---
 
