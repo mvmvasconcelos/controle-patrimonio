@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/patrimonio_provider.dart';
 import '../models/patrimonio.dart';
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import '../utils/feedback_utils.dart';
 
 class IndividualScanPage extends StatefulWidget {
-  final String selectedSala;
+  final String? selectedSala;
 
   const IndividualScanPage({super.key, required this.selectedSala});
 
@@ -44,8 +46,8 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
                   children: [
                     const Icon(Icons.location_on, color: Colors.blue),
                     const SizedBox(width: 8),
-                    Text(
-                      'Sala: ${widget.selectedSala}',
+                            Text(
+                              'Sala: ${widget.selectedSala ?? 'Não informada'}',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -120,8 +122,9 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
   }
 
   Widget _buildPatrimonioCard() {
-    final patrimonio = _patrimonioEncontrado!;
-    final isSalaDiferente = patrimonio.sala != widget.selectedSala;
+  final patrimonio = _patrimonioEncontrado!;
+  // Se o usuário não informou uma sala (null), não marcamos como diferente
+  final isSalaDiferente = widget.selectedSala != null && patrimonio.sala != widget.selectedSala;
 
     return Expanded(
       child: Card(
@@ -285,11 +288,24 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
     }
   }
 
-  void _abrirScanner() {
-    // TODO: Implementar scanner de código de barras
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Scanner será implementado na próxima etapa')),
-    );
+  Future<void> _abrirScanner() async {
+    try {
+      String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
+          '#1B5E20', 'Cancelar', true, ScanMode.BARCODE);
+
+      if (barcodeScanRes != '-1') {
+        await FeedbackUtils.provideHapticFeedback();
+        await FeedbackUtils.provideSoundFeedback();
+        _numeroController.text = barcodeScanRes;
+        _buscarPatrimonio(barcodeScanRes);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao abrir scanner: $e')),
+        );
+      }
+    }
   }
 
   void _limparBusca() {

@@ -44,12 +44,12 @@ O app funcionará como uma "prancheta digital", permitindo ao usuário escanear 
 **Objetivo:** Integrar e configurar o scanner de código de barras com feedback adequado.
 
 -   [ ] **3.1. Integração do Scanner**
-    -   [ ] **3.1.1.** Integrar e adaptar o scanner de código de barras (`barcode-scanner`)
+    -   [x] **3.1.1.** Integrar e adaptar o scanner de código de barras (`barcode-scanner`)
 
 -   [ ] **3.2. Feedback Sonoro e Háptico**
-    -   [ ] **3.2.1.** Implementar feedback para sucesso (item novo escaneado)
-    -   [ ] **3.2.2.** Implementar feedback para duplicado (item já escaneado na sessão atual)
-    -   [ ] **3.2.3.** Implementar feedback para não encontrado / erro
+    -   [x] **3.2.1.** Implementar feedback para sucesso (item novo escaneado)
+    -   [x] **3.2.2.** Implementar feedback para duplicado (item já escaneado na sessão atual)
+    -   [x] **3.2.3.** Implementar feedback para não encontrado / erro
 
 ---
 
@@ -76,8 +76,8 @@ O app funcionará como uma "prancheta digital", permitindo ao usuário escanear 
 **Objetivo:** Permitir escaneamento rápido de múltiplos itens com visualização em lista.
 
 -   [ ] **5.1. Scanner Contínuo**
-    -   [ ] **5.1.1.** Manter o scanner ativo, adicionando cada item escaneado a uma lista interna
-    -   [ ] **5.1.2.** Ao fechar o scanner, exibir a lista rolável dos itens
+    -   [x] **5.1.1.** Manter o scanner ativo, adicionando cada item escaneado a uma lista interna
+    -   [x] **5.1.2.** Ao fechar o scanner, exibir a lista rolável dos itens
 
 -   [ ] **5.2. Destaque Visual na Lista**
     -   [ ] **5.2.1.** Itens de sala diferente da pré-selecionada devem ter um fundo de cor sutilmente diferente

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import '../utils/feedback_utils.dart';
 
 class BatchScanPage extends StatefulWidget {
-  final String selectedSala;
+  final String? selectedSala;
 
   const BatchScanPage({super.key, required this.selectedSala});
 
@@ -12,6 +14,7 @@ class BatchScanPage extends StatefulWidget {
 class _BatchScanPageState extends State<BatchScanPage> {
   final List<String> _scannedItems = [];
   bool _isScanning = false;
+  final TextEditingController _numeroController = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +45,7 @@ class _BatchScanPageState extends State<BatchScanPage> {
                 const Icon(Icons.location_on),
                 const SizedBox(width: 8),
                 Text(
-                  'Sala: ${widget.selectedSala}',
+                  'Sala: ${widget.selectedSala ?? 'Não informada'}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -57,39 +60,57 @@ class _BatchScanPageState extends State<BatchScanPage> {
             ),
           ),
 
-          // Área do scanner
+          // Área de entrada manual e botão de escaneamento (UI similar ao individual)
           Expanded(
-            child: Container(
-              color: Colors.black,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      _isScanning ? Icons.qr_code_scanner : Icons.qr_code,
-                      size: 100,
-                      color: _isScanning ? Colors.green : Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextField(
+                    controller: _numeroController,
+                    decoration: const InputDecoration(
+                      labelText: 'Número do Patrimônio',
+                      hintText: 'Digite ou escaneie o código',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.qr_code),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      _isScanning ? 'Escaneando...' : 'Scanner não implementado',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
+                    keyboardType: TextInputType.number,
+                    onSubmitted: (_) => _addManual(),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _addManual,
+                          icon: const Icon(Icons.search),
+                          label: const Text('Buscar'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      ElevatedButton.icon(
+                        onPressed: _isScanning ? null : _scanOnce,
+                        icon: Icon(_isScanning ? Icons.stop : Icons.qr_code_scanner),
+                        label: Text(_isScanning ? 'Parar' : 'Escanear'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _isScanning ? Colors.red : Colors.green,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_isScanning)
+                    Center(
+                      child: Column(
+                        children: const [
+                          SizedBox(height: 8),
+                          Text('Escaneando...'),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _toggleScanning,
-                      icon: Icon(_isScanning ? Icons.stop : Icons.play_arrow),
-                      label: Text(_isScanning ? 'Parar' : 'Iniciar Scanner'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _isScanning ? Colors.red : Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+                ],
               ),
             ),
           ),
@@ -143,29 +164,125 @@ class _BatchScanPageState extends State<BatchScanPage> {
     });
 
     if (_isScanning) {
-      // Simular escaneamento para demonstração
-      _simulateScanning();
+      _startBatchScan();
     }
   }
 
-  void _simulateScanning() {
-    // Simulação de escaneamento - será substituído pelo scanner real
-    Future.delayed(const Duration(seconds: 2), () {
-      if (_isScanning && mounted) {
-        final numero = 'PAT${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}';
+  Future<void> _startBatchScan() async {
+    if (!_isScanning) return;
+
+    try {
+      // O scanner fecha após cada leitura, então chamamos recursivamente
+      // para simular um lote até que o usuário cancele
+      String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
+          '#1B5E20', 'Parar', true, ScanMode.BARCODE);
+
+      if (barcodeScanRes == '-1') {
+        // Usuário cancelou
         setState(() {
-          _scannedItems.add(numero);
+          _isScanning = false;
         });
-        // Continuar escaneando
-        _simulateScanning();
+        return;
       }
+
+      if (mounted) {
+        if (_scannedItems.contains(barcodeScanRes)) {
+          // Duplicado: não adicionar, apenas feedback diferente
+          await FeedbackUtils.provideHapticFeedback();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Item já escaneado')),
+          );
+        } else {
+          setState(() {
+            _scannedItems.add(barcodeScanRes);
+          });
+
+          await FeedbackUtils.provideHapticFeedback();
+          await FeedbackUtils.provideSoundFeedback();
+        }
+
+        // Continuar escaneando se ainda estiver no modo de escaneamento
+        if (_isScanning) {
+          _startBatchScan();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro no scanner: $e')),
+        );
+        setState(() {
+          _isScanning = false;
+        });
+      }
+    }
+  }
+
+  // Escaneia uma vez (usado pelo botão Escanear quando não em modo contínuo)
+  Future<void> _scanOnce() async {
+    try {
+      String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
+          '#1B5E20', 'Parar', true, ScanMode.BARCODE);
+
+      if (barcodeScanRes == '-1') return; // cancelado
+
+      if (!mounted) return;
+
+      if (_scannedItems.contains(barcodeScanRes)) {
+        await FeedbackUtils.provideHapticFeedback();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Item já escaneado')),
+        );
+        return;
+      }
+
+      setState(() {
+        _scannedItems.add(barcodeScanRes);
+      });
+
+      await FeedbackUtils.provideHapticFeedback();
+      await FeedbackUtils.provideSoundFeedback();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro no scanner: $e')),
+        );
+      }
+    }
+  }
+
+  // Adicionar manualmente via campo de texto
+  void _addManual() {
+    final value = _numeroController.text.trim();
+    if (value.isEmpty) return;
+
+    if (_scannedItems.contains(value)) {
+      FeedbackUtils.provideHapticFeedback();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Item já escaneado')),
+      );
+      return;
+    }
+
+    setState(() {
+      _scannedItems.add(value);
+      _numeroController.clear();
     });
+
+    FeedbackUtils.provideHapticFeedback();
+    FeedbackUtils.provideSoundFeedback();
   }
 
   void _removeItem(int index) {
     setState(() {
       _scannedItems.removeAt(index);
     });
+  }
+
+  @override
+  void dispose() {
+    _numeroController.dispose();
+    super.dispose();
   }
 
   void _finishScanning() {

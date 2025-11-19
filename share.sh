@@ -45,6 +45,10 @@ main() {
   log_info "🌐 Servidor de Compartilhamento APK"
   log_info "=========================================="
   
+  # Informar versão atual do APK
+  log_info "Versão atual do APK: $(grep '^version:' pubspec.yaml | cut -d' ' -f2)"
+  echo ""
+  
   # Verificar se APK existe
   if ! check_apk_exists; then
     exit 1
@@ -73,7 +77,7 @@ main() {
   sleep 1
   
   # Criar script Python para servidor com tratamento de erros
-  docker-compose exec -T flutter bash -c "cat > /tmp/http_server.py << 'PYTHON_SCRIPT'
+  docker-compose exec -T flutter bash -c "cat > /tmp/http_server.py << PYTHON_SCRIPT
 import http.server
 import socketserver
 import sys

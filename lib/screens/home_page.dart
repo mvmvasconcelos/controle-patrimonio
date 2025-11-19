@@ -228,26 +228,36 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _startIndividualScan(BuildContext context) async {
     final sala = await _showSalaSelectionDialog(context);
-    if (sala != null && mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => IndividualScanPage(selectedSala: sala),
-        ),
-      );
-    }
+    if (!mounted) return;
+
+    // Se o diálogo retornou null -> usuário cancelou (fechou com X)
+    if (sala == null) return;
+
+    // sala == ''  => usuário confirmou sem selecionar sala -> passamos null
+    final selectedSala = sala.isEmpty ? null : sala;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => IndividualScanPage(selectedSala: selectedSala),
+      ),
+    );
   }
 
   Future<void> _startBatchScan(BuildContext context) async {
     final sala = await _showSalaSelectionDialog(context);
-    if (sala != null && mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => BatchScanPage(selectedSala: sala),
-        ),
-      );
-    }
+    if (!mounted) return;
+
+    if (sala == null) return; // usuário cancelou com X
+
+    final selectedSala = sala.isEmpty ? null : sala;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BatchScanPage(selectedSala: selectedSala),
+      ),
+    );
   }
 
   Future<String?> _showSalaSelectionDialog(BuildContext context) async {
@@ -258,51 +268,85 @@ class _HomePageState extends State<HomePage> {
         .toList()
       ..sort();
 
-    return showDialog<String>(
+    // Use a local state inside the dialog so the Confirm button can be
+    // habilitado apenas quando o usuário escolher uma sala. O botão "Não"
+    // permite prosseguir com o scanner sem informar a sala (retorna
+    // 'Não informada').
+    // O diálogo permite confirmar sem selecionar sala (seleção opcional).
+    // O 'X' no canto fecha o diálogo e cancela a ação (retorna null).
+    // Ao confirmar, retornamos a sala selecionada ou a string vazia ('')
+    // para indicar que o usuário confirmou sem escolher sala.
+    return showDialog<String?>(
       context: context,
       builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Selecionar Sala'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Deseja informar qual é a sala?',
-                style: TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.maxFinite,
-                child: DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Sala',
-                    border: OutlineInputBorder(),
+        String? selectedLocal;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              titlePadding: const EdgeInsets.fromLTRB(24, 16, 8, 0),
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Expanded(child: Text('Selecionar Sala')),
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(null),
+                    tooltip: 'Fechar',
                   ),
-                  items: salas.map((sala) {
-                    return DropdownMenuItem<String>(
-                      value: sala,
-                      child: Text(sala),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    _selectedSala = value;
-                  },
-                ),
+                ],
               ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(_selectedSala);
-              },
-              child: const Text('Confirmar'),
-            ),
-          ],
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Deseja informar qual é a sala? (opcional)',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.maxFinite,
+                    child: DropdownButtonFormField<String>(
+                      value: selectedLocal,
+                      decoration: const InputDecoration(
+                        labelText: 'Sala',
+                        border: OutlineInputBorder(),
+                      ),
+                      items: salas.map((sala) {
+                        return DropdownMenuItem<String>(
+                          value: sala,
+                          child: Text(sala),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedLocal = value;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    // "Não" -> confirmar sem escolher sala
+                    Navigator.of(context).pop('');
+                  },
+                  child: const Text('Não'),
+                ),
+                ElevatedButton(
+                  onPressed: selectedLocal == null
+                      ? null
+                      : () {
+                          Navigator.of(context).pop(selectedLocal);
+                        },
+                  child: const Text('Confirmar'),
+                ),
+              ],
+            );
+          },
         );
       },
     );
