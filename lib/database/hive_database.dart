@@ -52,7 +52,16 @@ class HiveDatabase {
 
   static Future<void> updatePatrimonio(Patrimonio patrimonio) async {
     final box = patrimonioBox;
-    final key = patrimonio.key;
+    var key = patrimonio.key;
+
+    // Se a chave for nula (objeto criado via copyWith), tentar encontrar pelo número
+    if (key == null) {
+      final existing = getPatrimonioByNumero(patrimonio.numeroPatrimonio);
+      if (existing != null) {
+        key = existing.key;
+      }
+    }
+
     if (key != null) {
       await box.put(key, patrimonio);
     } else {

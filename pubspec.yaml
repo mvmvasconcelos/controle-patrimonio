@@ -1,7 +1,7 @@
 name: controle_patrimonio
 description: Minimal Flutter app for controle-patrimonio
 publish_to: none
-version: 1.0.0+1
+version: 1.0.0+4
 environment:
   sdk: ">=2.18.0 <3.0.0"
 dependencies:

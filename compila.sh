@@ -28,7 +28,7 @@ log_warning() { echo -e "${COLOR_WARNING}[WARNING]${COLOR_RESET} $1"; }
 # ============================================
 if [ ! -f "/.dockerenv" ]; then
   log_info "🐳 Executando compilação dentro do container Docker..."
-  docker-compose exec -T flutter bash -c "./compilaApk.sh $*"
+  docker-compose exec -T flutter bash -c "./compila.sh $*"
   exit $?
 fi
 
