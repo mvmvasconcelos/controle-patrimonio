@@ -27,15 +27,20 @@ void main() {
 
   testWidgets('BatchScanPage UI Test', (WidgetTester tester) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: const BatchScanPage(selectedSala: 'Sala 102'),
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => PatrimonioProvider()),
+        ],
+        child: MaterialApp(
+          home: const BatchScanPage(selectedSala: 'Sala 102'),
+        ),
       ),
     );
 
     // Verify basic UI elements
     expect(find.text('Escaneamento em Lotes'), findsOneWidget);
     expect(find.text('Sala: Sala 102'), findsOneWidget);
-    expect(find.text('Iniciar Scanner'), findsOneWidget);
-    expect(find.byIcon(Icons.qr_code), findsOneWidget);
+    expect(find.text('Escanear'), findsOneWidget);
+    expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
   });
 }

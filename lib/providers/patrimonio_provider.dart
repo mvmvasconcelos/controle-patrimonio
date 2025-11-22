@@ -79,24 +79,49 @@ class PatrimonioProvider with ChangeNotifier {
   // Atualizar patrimônio (marcar como modificado)
   Future<void> updatePatrimonio(Patrimonio patrimonio, Map<String, dynamic> changes) async {
     try {
-      // Criar versão modificada
+      // 1. Preservar ou Criar Original Values
+      // Se já existe originalValues, MANTÉM (para não perder o estado inicial da sessão).
+      // Se não existe, cria com os valores atuais (que são os originais neste momento).
+      final originalValues = patrimonio.originalValues ?? {
+        'sala': patrimonio.sala,
+        'responsavel': patrimonio.responsavel,
+        'situacao': patrimonio.situacao,
+        'observacoes': patrimonio.observacoes,
+        'descricao': patrimonio.descricao,
+      };
+
+      // 2. Calcular Modified Fields
+      // Compara os novos valores (changes) com os originais (originalValues)
+      // Se o valor novo for igual ao original, remove do map de modificados.
+      final currentModifiedFields = Map<String, dynamic>.from(patrimonio.modifiedFields ?? {});
+      
+      changes.forEach((key, newValue) {
+        final originalValue = originalValues[key];
+        if (newValue != originalValue) {
+          currentModifiedFields[key] = newValue;
+        } else {
+          currentModifiedFields.remove(key);
+        }
+      });
+
+      // Se não houver mais campos modificados, o item não está mais modificado (reverteu ao original)
+      final isModified = currentModifiedFields.isNotEmpty;
+
+      // 3. Criar versão atualizada
       final updatedPatrimonio = patrimonio.copyWith(
-        isModified: true,
-        modifiedFields: changes,
-        originalValues: {
-          'sala': patrimonio.sala,
-          'responsavel': patrimonio.responsavel,
-          'situacao': patrimonio.situacao,
-          'observacoes': patrimonio.observacoes,
-        },
+        isModified: isModified,
+        modifiedFields: isModified ? currentModifiedFields : null,
+        originalValues: isModified ? originalValues : null,
+        resetTracking: !isModified, // Se não está modificado, limpa o tracking
       );
 
-      // Aplicar mudanças
+      // Aplicar mudanças nos campos principais
       final finalPatrimonio = updatedPatrimonio.copyWith(
         sala: changes['sala'] ?? patrimonio.sala,
         responsavel: changes['responsavel'] ?? patrimonio.responsavel,
         situacao: changes['situacao'] ?? patrimonio.situacao,
         observacoes: changes['observacoes'] ?? patrimonio.observacoes,
+        descricao: changes['descricao'] ?? patrimonio.descricao,
       );
 
       await HiveDatabase.updatePatrimonio(finalPatrimonio);
@@ -109,6 +134,18 @@ class PatrimonioProvider with ChangeNotifier {
       }
     } catch (e) {
       _error = 'Erro ao atualizar patrimônio: $e';
+      notifyListeners();
+    }
+  }
+
+  // Adicionar novo patrimônio (localmente)
+  Future<void> addPatrimonio(Patrimonio patrimonio) async {
+    try {
+      await HiveDatabase.savePatrimonioData([patrimonio]); // savePatrimonioData handles add/update
+      _patrimonios.add(patrimonio);
+      notifyListeners();
+    } catch (e) {
+      _error = 'Erro ao adicionar patrimônio: $e';
       notifyListeners();
     }
   }

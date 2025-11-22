@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:provider/provider.dart';
+import '../providers/patrimonio_provider.dart';
+import '../models/patrimonio.dart';
+import '../widgets/scanned_item_modal.dart';
 import '../utils/feedback_utils.dart';
 
 class BatchScanPage extends StatefulWidget {
@@ -136,16 +140,144 @@ class _BatchScanPageState extends State<BatchScanPage> {
                     ),
                   ),
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: _scannedItems.length,
-                      itemBuilder: (context, index) {
-                        return ListTile(
-                          leading: const Icon(Icons.inventory),
-                          title: Text('Patrimônio ${_scannedItems[index]}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () => _removeItem(index),
-                          ),
+                    child: Consumer<PatrimonioProvider>(
+                      builder: (context, provider, child) {
+                        return ListView.builder(
+                          itemCount: _scannedItems.length,
+                          itemBuilder: (context, index) {
+                            final numero = _scannedItems[index];
+                            final patrimonio = provider.getPatrimonioByNumero(numero);
+                            
+                            // Determine status and colors
+                            final bool isFound = patrimonio != null;
+                            final bool isCorrectRoom = isFound && 
+                                (widget.selectedSala == null || patrimonio.sala == widget.selectedSala);
+                            
+                            Color statusColor;
+                            IconData statusIcon;
+                            
+                            if (!isFound) {
+                              statusColor = Colors.grey;
+                              statusIcon = Icons.help_outline;
+                            } else if (isCorrectRoom) {
+                              statusColor = Colors.green;
+                              statusIcon = Icons.check_circle;
+                            } else {
+                              statusColor = Colors.orange;
+                              statusIcon = Icons.warning_amber_rounded;
+                            }
+
+                            return Dismissible(
+                              key: Key(numero),
+                              direction: DismissDirection.endToStart,
+                              background: Container(
+                                color: Colors.red,
+                                alignment: Alignment.centerRight,
+                                padding: const EdgeInsets.only(right: 20),
+                                child: const Icon(Icons.delete, color: Colors.white),
+                              ),
+                              onDismissed: (direction) {
+                                _removeItem(index);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Item $numero removido da lista'),
+                                    action: SnackBarAction(
+                                      label: 'Desfazer',
+                                      onPressed: () {
+                                        setState(() {
+                                          _scannedItems.insert(index, numero);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Card(
+                                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(
+                                    color: statusColor.withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: InkWell(
+                                  onTap: () {
+                                    if (isFound) {
+                                      _editarPatrimonio(context, patrimonio);
+                                    } else {
+                                      _registrarNovoItem(numero);
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: statusColor.withOpacity(0.1),
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Icon(statusIcon, color: statusColor),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Patrimônio $numero',
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                              if (isFound) ...[
+                                                const SizedBox(height: 4),
+                                                Text(
+                                                  patrimonio.descricao,
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: TextStyle(color: Colors.grey[600]),
+                                                ),
+                                                const SizedBox(height: 4),
+                                                Row(
+                                                  children: [
+                                                    Icon(Icons.room, size: 14, color: Colors.grey[500]),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      patrimonio.sala,
+                                                      style: TextStyle(
+                                                        color: isCorrectRoom ? Colors.grey[600] : Colors.orange,
+                                                        fontWeight: isCorrectRoom ? FontWeight.normal : FontWeight.bold,
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ] else
+                                                const Text(
+                                                  'Não encontrado - Toque para registrar',
+                                                  style: TextStyle(
+                                                    color: Colors.grey,
+                                                    fontStyle: FontStyle.italic,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ),
+                                        const Icon(Icons.chevron_right, color: Colors.grey),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         );
                       },
                     ),
@@ -318,6 +450,73 @@ class _BatchScanPageState extends State<BatchScanPage> {
           ],
         );
       },
+    );
+  }
+  void _editarPatrimonio(BuildContext context, Patrimonio patrimonio) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ScannedItemModal(
+        patrimonio: patrimonio,
+        selectedSala: widget.selectedSala,
+        onSave: (updatedPatrimonio) {
+          _salvarAlteracoes(patrimonio, updatedPatrimonio);
+        },
+      ),
+    );
+  }
+
+  void _salvarAlteracoes(Patrimonio original, Patrimonio updated) {
+    final provider = context.read<PatrimonioProvider>();
+    
+    final changes = <String, dynamic>{};
+    if (original.descricao != updated.descricao) changes['descricao'] = updated.descricao;
+    if (original.sala != updated.sala) changes['sala'] = updated.sala;
+    if (original.responsavel != updated.responsavel) changes['responsavel'] = updated.responsavel;
+    if (original.situacao != updated.situacao) changes['situacao'] = updated.situacao;
+    if (original.observacoes != updated.observacoes) changes['observacoes'] = updated.observacoes;
+
+    if (changes.isNotEmpty) {
+      provider.updatePatrimonio(original, changes);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Alterações salvas com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
+  void _registrarNovoItem(String numero) {
+    final novoPatrimonio = Patrimonio(
+      numeroPatrimonio: numero,
+      descricao: '',
+      sala: widget.selectedSala ?? '',
+      responsavel: '',
+      situacao: 'Bom',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isModified: true,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ScannedItemModal(
+        patrimonio: novoPatrimonio,
+        selectedSala: widget.selectedSala,
+        onSave: (patrimonioSalvo) {
+          context.read<PatrimonioProvider>().addPatrimonio(patrimonioSalvo);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Novo item registrado com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+      ),
     );
   }
 }

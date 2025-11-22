@@ -4,6 +4,7 @@ import '../providers/patrimonio_provider.dart';
 import '../models/patrimonio.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../utils/feedback_utils.dart';
+import '../widgets/scanned_item_modal.dart';
 
 class IndividualScanPage extends StatefulWidget {
   final String? selectedSala;
@@ -316,10 +317,46 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
   }
 
   void _editarPatrimonio(BuildContext context, Patrimonio patrimonio) {
-    // TODO: Implementar modal de edição
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Edição será implementada na próxima etapa')),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ScannedItemModal(
+        patrimonio: patrimonio,
+        selectedSala: widget.selectedSala,
+        onSave: (updatedPatrimonio) {
+          _salvarAlteracoes(patrimonio, updatedPatrimonio);
+        },
+      ),
     );
+  }
+
+  void _salvarAlteracoes(Patrimonio original, Patrimonio updated) {
+    final provider = context.read<PatrimonioProvider>();
+    
+    // Calcular mudanças
+    final changes = <String, dynamic>{};
+    if (original.descricao != updated.descricao) changes['descricao'] = updated.descricao;
+    if (original.sala != updated.sala) changes['sala'] = updated.sala;
+    if (original.responsavel != updated.responsavel) changes['responsavel'] = updated.responsavel;
+    if (original.situacao != updated.situacao) changes['situacao'] = updated.situacao;
+    if (original.observacoes != updated.observacoes) changes['observacoes'] = updated.observacoes;
+
+    if (changes.isNotEmpty) {
+      provider.updatePatrimonio(original, changes);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Alterações salvas com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Atualizar a visualização
+      setState(() {
+        _patrimonioEncontrado = updated;
+      });
+    }
   }
 
   void _mostrarDialogNaoEncontrado(String numero) {
@@ -340,16 +377,51 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                // TODO: Implementar registro de novo item
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Registro de novo item será implementado')),
-                );
+                _registrarNovoItem(numero);
               },
               child: const Text('Registrar Novo'),
             ),
           ],
         );
       },
+    );
+  }
+
+  void _registrarNovoItem(String numero) {
+    final novoPatrimonio = Patrimonio(
+      numeroPatrimonio: numero,
+      descricao: '',
+      sala: widget.selectedSala ?? '',
+      responsavel: '',
+      situacao: 'Bom',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      isModified: true, // Novo item criado offline é modificado por definição
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ScannedItemModal(
+        patrimonio: novoPatrimonio,
+        selectedSala: widget.selectedSala,
+        onSave: (patrimonioSalvo) {
+          context.read<PatrimonioProvider>().addPatrimonio(patrimonioSalvo);
+          
+          setState(() {
+            _patrimonioEncontrado = patrimonioSalvo;
+            _numeroController.text = numero;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Novo item registrado com sucesso!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+      ),
     );
   }
 }

@@ -111,6 +111,7 @@ class Patrimonio extends HiveObject {
     bool? isModified,
     Map<String, dynamic>? originalValues,
     Map<String, dynamic>? modifiedFields,
+    bool resetTracking = false,
   }) {
     return Patrimonio(
       id: id ?? this.id,
@@ -123,9 +124,9 @@ class Patrimonio extends HiveObject {
       fotoUrl: fotoUrl ?? this.fotoUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      isModified: isModified ?? this.isModified,
-      originalValues: originalValues ?? this.originalValues,
-      modifiedFields: modifiedFields ?? this.modifiedFields,
+      isModified: resetTracking ? false : (isModified ?? this.isModified),
+      originalValues: resetTracking ? null : (originalValues ?? this.originalValues),
+      modifiedFields: resetTracking ? null : (modifiedFields ?? this.modifiedFields),
     );
   }
 

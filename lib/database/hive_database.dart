@@ -39,11 +39,22 @@ class HiveDatabase {
   }
 
   // Box para armazenar os dados do patrimônio
-  static Box<Patrimonio> get patrimonioBox =>
-      Hive.box<Patrimonio>(patrimonioBoxName);
+  static Box<Patrimonio>? _patrimonioBox;
+  static Box<Patrimonio> get patrimonioBox {
+    return _patrimonioBox ?? Hive.box<Patrimonio>(patrimonioBoxName);
+  }
+  static set patrimonioBox(Box<Patrimonio> box) {
+    _patrimonioBox = box;
+  }
 
   // Box para configurações do app
-  static Box get settingsBox => Hive.box(settingsBoxName);
+  static Box? _settingsBox;
+  static Box get settingsBox {
+    return _settingsBox ?? Hive.box(settingsBoxName);
+  }
+  static set settingsBox(Box box) {
+    _settingsBox = box;
+  }
 
   // Métodos para gerenciar dados do patrimônio
   static Future<void> savePatrimonioData(List<Patrimonio> patrimonios) async {

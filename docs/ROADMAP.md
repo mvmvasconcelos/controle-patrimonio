@@ -57,17 +57,17 @@ O app funcionará como uma "prancheta digital", permitindo ao usuário escanear 
 
 **Objetivo:** Permitir o escaneamento e edição de itens individuais com detecção de inconsistências.
 
--   [ ] **4.1. Modal de Visualização/Edição**
-    -   [ ] **4.1.1.** Ao escanear/digitar, abrir modal/formulário com os dados principais: `Nº de Patrimônio`, `Descrição`, `Sala`, `Responsável`, `Situação`
-    -   [ ] **4.1.2.** Permitir a edição dos campos
-    -   [ ] **4.1.3.** Implementar botão "Atualizar Item" para salvar as alterações
+-   [x] **4.1. Modal de Visualização/Edição**
+    -   [x] **4.1.1.** Ao escanear/digitar, abrir modal/formulário com os dados principais: `Nº de Patrimônio`, `Descrição`, `Sala`, `Responsável`, `Situação`
+    -   [x] **4.1.2.** Permitir a edição dos campos
+    -   [x] **4.1.3.** Implementar botão "Atualizar Item" para salvar as alterações
 
--   [ ] **4.2. Destaque de Inconsistências**
-    -   [ ] **4.2.1.** Se uma sala foi pré-selecionada, destacar o campo "Sala" com uma borda colorida caso o valor seja diferente do esperado
+-   [x] **4.2. Destaque de Inconsistências**
+    -   [x] **4.2.1.** Se uma sala foi pré-selecionada, destacar o campo "Sala" com uma borda colorida caso o valor seja diferente do esperado
 
--   [ ] **4.3. Lógica para Item Não Encontrado**
-    -   [ ] **4.3.1.** Exibir mensagem "O Patrimônio não foi encontrado. Tentar novamente ou registrar novo?"
-    -   [ ] **4.3.2.** Implementar opção "Registrar Novo" que abre o mesmo modal em branco para preenchimento
+-   [x] **4.3. Lógica para Item Não Encontrado**
+    -   [x] **4.3.1.** Exibir mensagem "O Patrimônio não foi encontrado. Tentar novamente ou registrar novo?"
+    -   [x] **4.3.2.** Implementar opção "Registrar Novo" que abre o mesmo modal em branco para preenchimento
 
 ---
 
@@ -75,17 +75,17 @@ O app funcionará como uma "prancheta digital", permitindo ao usuário escanear 
 
 **Objetivo:** Permitir escaneamento rápido de múltiplos itens com visualização em lista.
 
--   [ ] **5.1. Scanner Contínuo**
+-   [x] **5.1. Scanner Contínuo**
     -   [x] **5.1.1.** Manter o scanner ativo, adicionando cada item escaneado a uma lista interna
     -   [x] **5.1.2.** Ao fechar o scanner, exibir a lista rolável dos itens
 
--   [ ] **5.2. Destaque Visual na Lista**
-    -   [ ] **5.2.1.** Itens de sala diferente da pré-selecionada devem ter um fundo de cor sutilmente diferente
-    -   [ ] **5.2.2.** Itens não encontrados no banco de dados devem ter outra cor de destaque
+-   [x] **5.2. Destaque Visual na Lista**
+    -   [x] **5.2.1.** Itens de sala diferente da pré-selecionada devem ter um fundo de cor sutilmente diferente
+    -   [x] **5.2.2.** Itens não encontrados no banco de dados devem ter outra cor de destaque
 
--   [ ] **5.3. Interações na Lista**
-    -   [ ] **5.3.1.** Implementar deslizar para a esquerda para excluir o item da lista (cancela o escaneamento)
-    -   [ ] **5.3.2.** Implementar tocar ou deslizar para a direita para abrir o modal/formulário de visualização/edição
+-   [x] **5.3. Interações na Lista**
+    -   [x] **5.3.1.** Implementar deslizar para a esquerda para excluir o item da lista (cancela o escaneamento)
+    -   [x] **5.3.2.** Implementar tocar ou deslizar para a direita para abrir o modal/formulário de visualização/edição
 
 ---
 
@@ -93,9 +93,9 @@ O app funcionará como uma "prancheta digital", permitindo ao usuário escanear 
 
 **Objetivo:** Registrar todas as modificações feitas nos itens para gerar relatórios precisos.
 
--   [ ] **6.1. Sistema de Tracking no App**
-    -   [ ] **6.1.1.** Ao clicar em "Atualizar Item", salvar não apenas o novo estado, mas também quais campos foram alterados
-    -   [ ] **6.1.2.** Armazenar formato de alteração: `campo: 'valor_antigo' -> 'valor_novo'`
+-   [x] **6.1. Sistema de Tracking no App**
+    -   [x] **6.1.1.** Ao clicar em "Atualizar Item", salvar não apenas o novo estado, mas também quais campos foram alterados
+    -   [x] **6.1.2.** Armazenar formato de alteração: `campo: 'valor_antigo' -> 'valor_novo'`
 
 ---
 
