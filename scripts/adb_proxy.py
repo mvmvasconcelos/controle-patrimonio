@@ -43,6 +43,8 @@ def main(local_port, remote_port):
                             sock.close()
                         break
                     other.sendall(data)
+                    direction = "->" if s is sockets[0] else "<-"
+                    print(f"{direction} {len(data)} bytes")
                 except Exception as e:
                     print(f"Error forwarding: {e}")
                     for sock in sockets:
@@ -55,5 +57,5 @@ def main(local_port, remote_port):
         # print("Connection closed")
 
 if __name__ == '__main__':
-    # Port 5556 (accessible by Docker) -> 5555 (SSH Tunnel to Emulator)
-    main(5556, 5555)
+    # Port 5556 (accessible by Docker) -> 5557 (SSH Tunnel to Emulator)
+    main(5556, 5557)

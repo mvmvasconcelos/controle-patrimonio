@@ -8,7 +8,7 @@ O objetivo é permitir que o container Docker (onde o Flutter roda) se comunique
 
 *   **Local (Windows)**: Roda o Emulador Android e o Cliente SSH.
 *   **Remoto (Linux)**: Roda o Docker e um Proxy Python.
-*   **Conexão**: Um túnel SSH reverso encaminha a porta do emulador (5555) para o Linux, e o Proxy Python distribui isso para o Docker.
+*   **Conexão**: Um túnel SSH reverso encaminha a porta do emulador (5555) para o Linux (na porta 5557), e o Proxy Python distribui isso para o Docker.
 
 ## 2. O Que Foi Instalado/Criado
 
@@ -19,9 +19,9 @@ Para que isso funcione, adicionamos os seguintes arquivos ao projeto:
     *   *Uso*: Útil para debug no servidor (host), mas o Docker usa seu próprio ADB interno.
 2.  **`scripts/adb_proxy.py`**:
     *   Um script Python simples que cria uma "ponte" de rede.
-    *   *Motivo*: O Docker não consegue acessar diretamente o túnel SSH (localhost) do servidor. O proxy escuta em `0.0.0.0` (acessível ao Docker) e repassa para `localhost` (Túnel).
-3.  **`scripts/connect_emulator.sh`**:
-    *   Script facilitador para rodar dentro do container. Ele executa o comando `adb connect` apontando para o proxy.
+    *   *Motivo*: O Docker não consegue acessar diretamente o túnel SSH (localhost) do servidor. O proxy escuta em `0.0.0.0:5556` (acessível ao Docker) e repassa para `localhost:5557` (Túnel).
+3.  **`emulador.sh`**:
+    *   Script facilitador para rodar no Linux. Ele usa `docker-compose exec` para garantir que usamos o container persistente (mantendo a autorização do ADB).
 
 ## 3. Configuração Inicial (Setup)
 
@@ -45,8 +45,8 @@ Para que isso funcione, adicionamos os seguintes arquivos ao projeto:
     Host nome-do-seu-servidor
         HostName 128.1.1.49
         User seu-usuario
-        # Encaminha a porta 5555 do servidor para a 5555 do seu Windows
-        RemoteForward 5555 localhost:5555
+        # Encaminha a porta 5557 do servidor para a 5555 do seu Windows (IP 127.0.0.1)
+        RemoteForward 5557 127.0.0.1:5555
     ```
 
 3.  **Reconectar**:
@@ -76,14 +76,14 @@ Sempre que for programar, siga estes passos:
 O proxy precisa estar rodando no servidor para ligar o Docker ao Túnel.
 ```bash
 # Roda em background e salva logs em proxy.log
-nohup python3 scripts/adb_proxy.py > proxy.log 2>&1 &
+nohup python3 -u scripts/adb_proxy.py > proxy.log 2>&1 &
 ```
 *(Você só precisa rodar isso uma vez por sessão. Se reiniciar o servidor, rode de novo).*
 
 ### Passo 2: Conectar o Container ao Emulador
 Execute este script para fazer o ADB do container conversar com o proxy:
 ```bash
-docker-compose run --rm flutter ./scripts/connect_emulator.sh
+./emulador.sh
 ```
 
 *   **Atenção**: Na primeira vez, olhe para o Emulador no Windows. Vai aparecer uma janela **"Allow USB Debugging?"**. Marque "Always allow" e clique em **Allow**.
@@ -104,9 +104,9 @@ docker-compose run --rm flutter flutter run
 
 *   **Erro "Connection refused" no Proxy (logs)**:
     *   O túnel SSH caiu ou não foi criado.
-    *   Verifique seu `~/.ssh/config` no Windows.
-    *   Reconecte o SSH.
+    *   Verifique seu `~/.ssh/config` no Windows (deve usar porta 5557 -> 127.0.0.1:5555).
+    *   Reconecte o SSH (Close Window -> Open Window se necessário).
 
-*   **Dispositivo "Unauthorized"**:
+*   **Dispositivo "Unauthorized" ou "Offline"**:
     *   Você precisa aceitar a permissão no Emulador.
-    *   Se a janela não aparecer: No emulador, vá em *Developer options* > *Revoke USB debugging authorizations*, desligue e ligue o *USB debugging*, e rode o Passo 2 de novo.
+    *   Se estiver em loop "offline": O script `emulador.sh` deve usar `docker-compose exec` (não `run`). Verifique se o container `flutter` está rodando (`docker-compose ps`).
