@@ -46,3 +46,10 @@ app.*.map.json
 /android/key.properties
 /android/app/*.jks
 /android/app/*.keystore
+*.apk
+
+# Local Tools & Logs
+tools/
+proxy.log
+test_proxy.log
+nc_out.txt

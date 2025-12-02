@@ -19,6 +19,8 @@ services:
     tty: true
     # Manter container vivo para execução de comandos
     command: ["sh", "-c", "tail -f /dev/null"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   backend:
     build: ./backend
