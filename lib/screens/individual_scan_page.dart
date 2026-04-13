@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/patrimonio_provider.dart';
 import '../models/patrimonio.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import '../utils/feedback_utils.dart';
 import '../widgets/scanned_item_modal.dart';
+import '../widgets/barcode_scanner_screen.dart';
 
 class IndividualScanPage extends StatefulWidget {
   final String? selectedSala;
@@ -83,7 +83,7 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
                   child: ElevatedButton.icon(
                     onPressed: _isLoading ? null : () => _buscarPatrimonio(_numeroController.text),
                     icon: const Icon(Icons.search),
-                    label: const Text('Buscar'),
+                    label: const Text('Pesquisar manualmente'),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -148,6 +148,11 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
                       ),
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    tooltip: 'Fechar',
+                    onPressed: _limparBusca,
+                  ),
                 ],
               ),
 
@@ -171,24 +176,13 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
               const Spacer(),
 
               // Botões de ação
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _limparBusca,
-                      icon: const Icon(Icons.clear),
-                      label: const Text('Novo'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _editarPatrimonio(context, patrimonio),
-                      icon: const Icon(Icons.edit),
-                      label: const Text('Editar'),
-                    ),
-                  ),
-                ],
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _editarPatrimonio(context, patrimonio),
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Editar'),
+                ),
               ),
             ],
           ),
@@ -291,14 +285,18 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
 
   Future<void> _abrirScanner() async {
     try {
-      String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-          '#1B5E20', 'Cancelar', true, ScanMode.BARCODE);
+      final result = await Navigator.push<String?>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const BarcodeScannerScreen(cancelLabel: 'Cancelar'),
+        ),
+      );
 
-      if (barcodeScanRes != '-1') {
+      if (result != null && mounted) {
         await FeedbackUtils.provideHapticFeedback();
         await FeedbackUtils.provideSoundFeedback();
-        _numeroController.text = barcodeScanRes;
-        _buscarPatrimonio(barcodeScanRes);
+        _numeroController.text = result;
+        _buscarPatrimonio(result);
       }
     } catch (e) {
       if (mounted) {

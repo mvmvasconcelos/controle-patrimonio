@@ -72,16 +72,9 @@ Para que isso funcione, adicionamos os seguintes arquivos ao projeto:
 
 Sempre que for programar, siga estes passos:
 
-### Passo 1: Iniciar o Proxy (No Terminal do VS Code)
-O proxy precisa estar rodando no servidor para ligar o Docker ao Túnel.
-```bash
-# Roda em background e salva logs em proxy.log
-nohup python3 -u scripts/adb_proxy.py > proxy.log 2>&1 &
-```
-*(Você só precisa rodar isso uma vez por sessão. Se reiniciar o servidor, rode de novo).*
+### Passo 1: Conectar e Rodar
+O script `emulador.sh` agora faz tudo: inicia o proxy (se necessário) e conecta o container.
 
-### Passo 2: Conectar o Container ao Emulador
-Execute este script para fazer o ADB do container conversar com o proxy:
 ```bash
 ./emulador.sh
 ```
@@ -90,7 +83,7 @@ Execute este script para fazer o ADB do container conversar com o proxy:
 *   Se o script disser `device`, está conectado!
 *   Se disser `unauthorized`, você não aceitou a janela a tempo. Rode o script de novo.
 
-### Passo 3: Rodar o App
+### Passo 2: Rodar o App
 Agora é só usar o Flutter normalmente via Docker:
 ```bash
 docker-compose run --rm flutter flutter run

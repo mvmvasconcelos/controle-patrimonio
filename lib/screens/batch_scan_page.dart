@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:provider/provider.dart';
 import '../providers/patrimonio_provider.dart';
 import '../models/patrimonio.dart';
 import '../widgets/scanned_item_modal.dart';
 import '../utils/feedback_utils.dart';
+import '../widgets/barcode_scanner_screen.dart';
 
 class BatchScanPage extends StatefulWidget {
   final String? selectedSala;
@@ -89,7 +89,7 @@ class _BatchScanPageState extends State<BatchScanPage> {
                         child: ElevatedButton.icon(
                           onPressed: _addManual,
                           icon: const Icon(Icons.search),
-                          label: const Text('Buscar'),
+                          label: const Text('Pesquisar manualmente'),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -304,12 +304,14 @@ class _BatchScanPageState extends State<BatchScanPage> {
     if (!_isScanning) return;
 
     try {
-      // O scanner fecha após cada leitura, então chamamos recursivamente
-      // para simular um lote até que o usuário cancele
-      String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-          '#1B5E20', 'Parar', true, ScanMode.BARCODE);
+      final result = await Navigator.push<String?>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const BarcodeScannerScreen(cancelLabel: 'Parar'),
+        ),
+      );
 
-      if (barcodeScanRes == '-1') {
+      if (result == null) {
         // Usuário cancelou
         setState(() {
           _isScanning = false;
@@ -318,7 +320,7 @@ class _BatchScanPageState extends State<BatchScanPage> {
       }
 
       if (mounted) {
-        if (_scannedItems.contains(barcodeScanRes)) {
+        if (_scannedItems.contains(result)) {
           // Duplicado: não adicionar, apenas feedback diferente
           await FeedbackUtils.provideHapticFeedback();
           ScaffoldMessenger.of(context).showSnackBar(
@@ -326,7 +328,7 @@ class _BatchScanPageState extends State<BatchScanPage> {
           );
         } else {
           setState(() {
-            _scannedItems.add(barcodeScanRes);
+            _scannedItems.add(result);
           });
 
           await FeedbackUtils.provideHapticFeedback();
@@ -353,14 +355,18 @@ class _BatchScanPageState extends State<BatchScanPage> {
   // Escaneia uma vez (usado pelo botão Escanear quando não em modo contínuo)
   Future<void> _scanOnce() async {
     try {
-      String barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
-          '#1B5E20', 'Parar', true, ScanMode.BARCODE);
+      final result = await Navigator.push<String?>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const BarcodeScannerScreen(cancelLabel: 'Parar'),
+        ),
+      );
 
-      if (barcodeScanRes == '-1') return; // cancelado
+      if (result == null) return; // cancelado
 
       if (!mounted) return;
 
-      if (_scannedItems.contains(barcodeScanRes)) {
+      if (_scannedItems.contains(result)) {
         await FeedbackUtils.provideHapticFeedback();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Item já escaneado')),
@@ -369,7 +375,7 @@ class _BatchScanPageState extends State<BatchScanPage> {
       }
 
       setState(() {
-        _scannedItems.add(barcodeScanRes);
+        _scannedItems.add(result);
       });
 
       await FeedbackUtils.provideHapticFeedback();

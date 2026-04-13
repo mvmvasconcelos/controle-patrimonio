@@ -1,9 +1,9 @@
 name: controle_patrimonio
 description: Minimal Flutter app for controle-patrimonio
 publish_to: none
-version: 1.0.1+13
+version: 1.0.1+19
 environment:
-  sdk: ">=2.18.0 <3.0.0"
+  sdk: ">=3.0.0 <4.0.0"
 dependencies:
   flutter:
     sdk: flutter
@@ -26,7 +26,7 @@ dependencies:
   hive_flutter: ^1.1.0
   
   # Barcode scanner
-  flutter_barcode_scanner: ^2.0.0
+  mobile_scanner: ^3.5.7
   audioplayers: ^5.2.1
   
   # File handling & installation

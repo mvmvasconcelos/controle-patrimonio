@@ -1,25 +1,26 @@
 #!/bin/bash
 
 # Detect if running in Docker
+# Detect if running in Docker
 if [ -f /.dockerenv ]; then
-    echo "Running inside Docker container."
+    echo "Rodando dentro do container Docker."
     # In Docker, we use the internal ADB client to connect to the proxy
     # The proxy is at host.docker.internal:5556
-    echo "Connecting to emulator via proxy..."
+    echo "Conectando ao emulador via proxy..."
     adb connect host.docker.internal:5556
 else
-    echo "Running on Host machine."
+    echo "Rodando na máquina Host."
     ADB_LOCAL="$(pwd)/tools/android-sdk/platform-tools"
     if [ -d "$ADB_LOCAL" ]; then
         export PATH="$ADB_LOCAL:$PATH"
     fi
-    echo "Connecting to emulator via localhost..."
+    echo "Conectando ao emulador via localhost..."
     adb connect localhost:5555
 fi
 
 echo ""
-echo "Checking for devices..."
+echo "Verificando dispositivos..."
 adb devices
 
 echo ""
-echo "If you see your emulator above (host.docker.internal:5556), you can now run 'flutter run'."
+echo "Se você ver seu emulador acima (host.docker.internal:5556), você pode rodar 'flutter run'."
