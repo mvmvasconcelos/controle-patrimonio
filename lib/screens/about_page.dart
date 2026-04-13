@@ -1,7 +1,7 @@
-/// Tela Sobre do aplicativo.
-/// 
-/// Mostra informações sobre o aplicativo e gerencia o processo de atualização.
-/// Permite também configurar o servidor de atualizações.
+// Tela Sobre do aplicativo.
+//
+// Mostra informações sobre o aplicativo e gerencia o processo de atualização.
+// Permite também configurar o servidor de atualizações.
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';

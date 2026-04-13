@@ -1,7 +1,7 @@
-/// Classe auxiliar para obter e gerenciar informações globais do aplicativo.
-/// 
-/// Fornece acesso a informações como versão, nome e data de lançamento do app.
-/// Estas informações são carregadas dinamicamente e podem ser acessadas de qualquer lugar do app.
+// Classe auxiliar para obter e gerenciar informações globais do aplicativo.
+//
+// Fornece acesso a informações como versão, nome e data de lançamento do app.
+// Estas informações são carregadas dinamicamente e podem ser acessadas de qualquer lugar do app.
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';

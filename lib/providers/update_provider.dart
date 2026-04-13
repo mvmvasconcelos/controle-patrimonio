@@ -1,7 +1,7 @@
-/// Provider opcional para gerenciar o estado de atualização do aplicativo.
-/// 
-/// Centraliza a lógica de gerenciamento do processo de atualização que antes estava
-/// diretamente na tela About. Comunica-se com o UpdateService.
+// Provider opcional para gerenciar o estado de atualização do aplicativo.
+//
+// Centraliza a lógica de gerenciamento do processo de atualização que antes estava
+// diretamente na tela About. Comunica-se com o UpdateService.
 
 import 'package:flutter/material.dart';
 import '../services/update_service.dart';

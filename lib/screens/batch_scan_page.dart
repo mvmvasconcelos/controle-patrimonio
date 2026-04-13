@@ -17,7 +17,6 @@ class BatchScanPage extends StatefulWidget {
 
 class _BatchScanPageState extends State<BatchScanPage> {
   final List<String> _scannedItems = [];
-  bool _isScanning = false;
   final TextEditingController _numeroController = TextEditingController();
 
   @override
@@ -94,26 +93,17 @@ class _BatchScanPageState extends State<BatchScanPage> {
                       ),
                       const SizedBox(width: 12),
                       ElevatedButton.icon(
-                        onPressed: _isScanning ? null : _scanOnce,
-                        icon: Icon(_isScanning ? Icons.stop : Icons.qr_code_scanner),
-                        label: Text(_isScanning ? 'Parar' : 'Escanear'),
+                        onPressed: _scanOnce,
+                        icon: const Icon(Icons.qr_code_scanner),
+                        label: const Text('Escanear'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _isScanning ? Colors.red : Colors.green,
+                          backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  if (_isScanning)
-                    Center(
-                      child: Column(
-                        children: const [
-                          SizedBox(height: 8),
-                          Text('Escaneando...'),
-                        ],
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -290,69 +280,7 @@ class _BatchScanPageState extends State<BatchScanPage> {
     );
   }
 
-  void _toggleScanning() {
-    setState(() {
-      _isScanning = !_isScanning;
-    });
-
-    if (_isScanning) {
-      _startBatchScan();
-    }
-  }
-
-  Future<void> _startBatchScan() async {
-    if (!_isScanning) return;
-
-    try {
-      final result = await Navigator.push<String?>(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const BarcodeScannerScreen(cancelLabel: 'Parar'),
-        ),
-      );
-
-      if (result == null) {
-        // Usuário cancelou
-        setState(() {
-          _isScanning = false;
-        });
-        return;
-      }
-
-      if (mounted) {
-        if (_scannedItems.contains(result)) {
-          // Duplicado: não adicionar, apenas feedback diferente
-          await FeedbackUtils.provideHapticFeedback();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Item já escaneado')),
-          );
-        } else {
-          setState(() {
-            _scannedItems.add(result);
-          });
-
-          await FeedbackUtils.provideHapticFeedback();
-          await FeedbackUtils.provideSoundFeedback();
-        }
-
-        // Continuar escaneando se ainda estiver no modo de escaneamento
-        if (_isScanning) {
-          _startBatchScan();
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro no scanner: $e')),
-        );
-        setState(() {
-          _isScanning = false;
-        });
-      }
-    }
-  }
-
-  // Escaneia uma vez (usado pelo botão Escanear quando não em modo contínuo)
+  // Escaneia uma vez (usado pelo botão Escanear)
   Future<void> _scanOnce() async {
     try {
       final result = await Navigator.push<String?>(
@@ -366,9 +294,10 @@ class _BatchScanPageState extends State<BatchScanPage> {
 
       if (!mounted) return;
 
+      final messenger = ScaffoldMessenger.of(context);
       if (_scannedItems.contains(result)) {
         await FeedbackUtils.provideHapticFeedback();
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(content: Text('Item já escaneado')),
         );
         return;

@@ -77,7 +77,9 @@ class UpdateService {
       final prefs = await SharedPreferences.getInstance();
       _serverIp = prefs.getString(_prefServerIpKey) ?? _defaultServerIp;
       _serverPort = prefs.getInt(_prefServerPortKey) ?? _defaultServerPort;
-    } catch (e) {}
+    } catch (e) {
+      debugPrint('[UpdateService] Erro ao carregar configurações: $e');
+    }
   }
 
   // Método para verificar se há atualizações disponíveis
@@ -201,7 +203,7 @@ class UpdateService {
             final String latestFullVersion = "$latestVersion+$latestBuildNumber";
             
             // Comparar versões (incluindo o número de build)
-            final bool updateAvailable = _isNewerVersion(latestFullVersion, currentVersion + "+" + packageInfo.buildNumber);
+            final bool updateAvailable = _isNewerVersion(latestFullVersion, '$currentVersion+${packageInfo.buildNumber}');
             
             _isChecking = false;
             
@@ -304,7 +306,7 @@ class UpdateService {
       
       // Se não conseguir o diretório de downloads, usa o temporário
       final Directory saveDir = storageDir ?? await getTemporaryDirectory();
-      final String fileName = "controle_patrimonio_update.apk"; // Nome de arquivo fixo para evitar problemas de caracteres especiais
+      const String fileName = "controle_patrimonio_update.apk"; // Nome de arquivo fixo para evitar problemas de caracteres especiais
       final String savePath = '${saveDir.path}/$fileName';
       
       // Remover arquivo antigo se existir

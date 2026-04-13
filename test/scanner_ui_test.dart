@@ -12,8 +12,8 @@ void main() {
         providers: [
           ChangeNotifierProvider(create: (_) => PatrimonioProvider()),
         ],
-        child: MaterialApp(
-          home: const IndividualScanPage(selectedSala: 'Sala 101'),
+        child: const MaterialApp(
+          home: IndividualScanPage(selectedSala: 'Sala 101'),
         ),
       ),
     );
@@ -22,7 +22,7 @@ void main() {
     expect(find.text('Escaneamento Individual'), findsOneWidget);
     expect(find.text('Sala: Sala 101'), findsOneWidget);
     expect(find.byIcon(Icons.qr_code_scanner), findsOneWidget);
-    expect(find.text('Buscar'), findsOneWidget);
+    expect(find.text('Pesquisar manualmente'), findsOneWidget);
   });
 
   testWidgets('BatchScanPage UI Test', (WidgetTester tester) async {
@@ -31,8 +31,8 @@ void main() {
         providers: [
           ChangeNotifierProvider(create: (_) => PatrimonioProvider()),
         ],
-        child: MaterialApp(
-          home: const BatchScanPage(selectedSala: 'Sala 102'),
+        child: const MaterialApp(
+          home: BatchScanPage(selectedSala: 'Sala 102'),
         ),
       ),
     );

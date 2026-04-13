@@ -12,8 +12,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String? _selectedSala;
-
   @override
   void initState() {
     super.initState();
@@ -35,6 +33,41 @@ class _HomePageState extends State<HomePage> {
             icon: const Icon(Icons.sync),
             onPressed: _syncData,
             tooltip: 'Sincronizar dados',
+          ),
+          Consumer<PatrimonioProvider>(
+            builder: (context, provider, _) {
+              final count = provider.patrimonios.where((p) => p.isModified).length;
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.table_chart),
+                    onPressed: () => Navigator.pushNamed(context, '/report'),
+                    tooltip: 'Relatório de alterações',
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 6,
+                      top: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '$count',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.info),
@@ -227,6 +260,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _startIndividualScan(BuildContext context) async {
+    final navigator = Navigator.of(context);
     final sala = await _showSalaSelectionDialog(context);
     if (!mounted) return;
 
@@ -236,8 +270,7 @@ class _HomePageState extends State<HomePage> {
     // sala == ''  => usuário confirmou sem selecionar sala -> passamos null
     final selectedSala = sala.isEmpty ? null : sala;
 
-    Navigator.push(
-      context,
+    navigator.push(
       MaterialPageRoute(
         builder: (context) => IndividualScanPage(selectedSala: selectedSala),
       ),
@@ -245,6 +278,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _startBatchScan(BuildContext context) async {
+    final navigator = Navigator.of(context);
     final sala = await _showSalaSelectionDialog(context);
     if (!mounted) return;
 
@@ -252,8 +286,7 @@ class _HomePageState extends State<HomePage> {
 
     final selectedSala = sala.isEmpty ? null : sala;
 
-    Navigator.push(
-      context,
+    navigator.push(
       MaterialPageRoute(
         builder: (context) => BatchScanPage(selectedSala: selectedSala),
       ),
