@@ -6,6 +6,8 @@ import 'providers/update_provider.dart';
 import 'screens/home_page.dart';
 import 'screens/about_page.dart';
 import 'screens/report_page.dart';
+import 'screens/data_management_page.dart';
+import 'screens/inventory_list_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +38,8 @@ class MyApp extends StatelessWidget {
         routes: {
           '/about': (context) => const AboutPage(),
           '/report': (context) => const ReportPage(),
+          '/data': (context) => const DataManagementPage(),
+          '/inventory': (context) => const InventoryListPage(),
         },
       ),
     );

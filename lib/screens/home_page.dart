@@ -30,6 +30,11 @@ class _HomePageState extends State<HomePage> {
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
           IconButton(
+            icon: const Icon(Icons.upload_file),
+            onPressed: () => Navigator.pushNamed(context, '/data'),
+            tooltip: 'Importar / Exportar planilha',
+          ),
+          IconButton(
             icon: const Icon(Icons.sync),
             onPressed: _syncData,
             tooltip: 'Sincronizar dados',

@@ -99,71 +99,95 @@ O app funcionará como uma "prancheta digital", permitindo ao usuário escanear 
 
 ---
 
-### Etapa 7: Geração do Relatório de Modificações
+### Etapa 7: Importação e Exportação de Planilha SUAP
 
-**Objetivo:** Implementar a funcionalidade crítica de geração de planilha para atualização do SUAP.
+**Objetivo:** Permitir que o app funcione de forma independente do backend, usando a própria planilha exportada do SUAP como base de dados.
 
--   [ ] **7.1. Tela de Relatórios**
-    -   [ ] **7.1.1.** Criar nova seção no app para "Relatórios"
-    -   [ ] **7.1.2.** Implementar botão "Gerar Planilha de Atualização do SUAP"
+-   [x] **7.1. Importação**
+    -   [x] **7.1.1.** Suporte a `.csv`, `.xls` e `.xlsx` exportados do SUAP
+    -   [x] **7.1.2.** Mapeamento automático de colunas SUAP → modelo interno
+    -   [x] **7.1.3.** Preservação de todos os dados brutos originais para exportação fiel
+    -   [x] **7.1.4.** Aviso ao sobrescrever dados com modificações pendentes
+    -   [x] **7.1.5.** App aparece no menu "Abrir com" / "Compartilhar" do Android para arquivos SUAP
 
--   [ ] **7.2. Lógica de Geração da Planilha**
-    -   [ ] **7.2.1.** Coletar todos os itens que foram marcados como modificados
-    -   [ ] **7.2.2.** Gerar arquivo (CSV ou Excel - `.xlsx`) com a mesma estrutura e colunas da planilha original do SUAP
-    -   [ ] **7.2.3.** **Funcionalidade Chave:** Destacar (com cor de fundo) as células específicas que sofreram alteração
-    -   [ ] **7.2.4.** Permitir que o usuário exporte/compartilhe este arquivo
+-   [x] **7.2. Listagem do Inventário**
+    -   [x] **7.2.1.** Tela de listagem completa com busca por nº, descrição, sala e responsável
+    -   [x] **7.2.2.** Filtros por sala e por itens modificados
+    -   [x] **7.2.3.** Destaque visual para itens que sofreram alterações
 
----
-
-### Etapa 8: Histórico de Alterações no Servidor
-
-**Objetivo:** Registrar log de todas as modificações no backend para auditoria.
-
--   [ ] **8.1. Tabela de Logs**
-    -   [ ] **8.1.1.** Criar tabela `historico_alteracoes` no SQLite do servidor
-
--   [ ] **8.2. Endpoint de Log**
-    -   [ ] **8.2.1.** Modificar endpoint `POST /patrimonio/update` no FastAPI para registrar logs
-    -   [ ] **8.2.2.** Armazenar: `id_item`, `campo_alterado`, `valor_antigo`, `valor_novo`, `timestamp`
+-   [x] **7.3. Exportação**
+    -   [x] **7.3.1.** Exportar apenas itens modificados (mesmo formato/colunas do SUAP)
+    -   [x] **7.3.2.** Exportar planilha completa com coluna `ATUALIZADO_EM` (preenchida só nos alterados)
+    -   [x] **7.3.3.** Células modificadas destacadas em amarelo no `.xlsx`
+    -   [x] **7.3.4.** Escolha de formato: `.xlsx` ou `.csv`
 
 ---
 
-### Etapa 9: Funcionalidade de Fotos
+### Etapa 8: Geração do Relatório de Modificações (Visão App)
+
+**Objetivo:** Interface dedicada para visualizar e exportar as alterações realizadas durante a sessão.
+
+-   [x] **8.1. Tela de Relatórios**
+    -   [x] **8.1.1.** Criar nova seção no app para "Relatórios"
+    -   [x] **8.1.2.** Implementar botão "Gerar Planilha de Atualização do SUAP"
+
+-   [x] **8.2. Lógica de Geração da Planilha**
+    -   [x] **8.2.1.** Coletar todos os itens que foram marcados como modificados
+    -   [x] **8.2.2.** Gerar arquivo `.xlsx` com a mesma estrutura e colunas da planilha original do SUAP
+    -   [x] **8.2.3.** **Funcionalidade Chave:** Destacar (com cor de fundo) as células específicas que sofreram alteração
+    -   [x] **8.2.4.** Permitir que o usuário abra/compartilhe este arquivo
+
+---
+
+### Etapa 9: Histórico de Alterações no Servidor
+
+**Objetivo:** Registrar log de todas as modificações no backend para auditoria. *(Prioridade baixa)*
+
+-   [ ] **9.1. Tabela de Logs**
+    -   [ ] **9.1.1.** Criar tabela `historico_alteracoes` no SQLite do servidor
+
+-   [ ] **9.2. Endpoint de Log**
+    -   [ ] **9.2.1.** Modificar endpoint `POST /patrimonio/update` no FastAPI para registrar logs
+    -   [ ] **9.2.2.** Armazenar: `id_item`, `campo_alterado`, `valor_antigo`, `valor_novo`, `timestamp`
+
+---
+
+### Etapa 10: Funcionalidade de Fotos
 
 **Objetivo:** Permitir registro fotográfico dos itens patrimoniais.
 
--   [ ] **9.1. Interface no App**
-    -   [ ] **9.1.1.** Implementar botão no modal para `tirar foto / escolher da galeria`
+-   [ ] **10.1. Interface no App**
+    -   [ ] **10.1.1.** Implementar botão no modal para `tirar foto / escolher da galeria`
 
--   [ ] **9.2. Armazenamento no Servidor**
-    -   [ ] **9.2.1.** Criar endpoint no FastAPI para receber upload da imagem
-    -   [ ] **9.2.2.** Salvar imagem em uma pasta no servidor local, associando seu caminho ao item de patrimônio
+-   [ ] **10.2. Armazenamento no Servidor**
+    -   [ ] **10.2.1.** Criar endpoint no FastAPI para receber upload da imagem
+    -   [ ] **10.2.2.** Salvar imagem em uma pasta no servidor local, associando seu caminho ao item de patrimônio
 
--   [ ] **9.3. Visualização**
-    -   [ ] **9.3.1.** Exibir foto do item no modal, buscando-a do servidor quando online
-    -   [ ] **9.3.2.** Implementar cache de imagens no app para visualização offline
+-   [ ] **10.3. Visualização**
+    -   [ ] **10.3.1.** Exibir foto do item no modal, buscando-a do servidor quando online
+    -   [ ] **10.3.2.** Implementar cache de imagens no app para visualização offline
 
 ---
 
-### Etapa 10: Relatórios Adicionais
+### Etapa 11: Relatórios Adicionais
 
 **Objetivo:** Fornecer relatórios úteis para gestão administrativa.
 
--   [ ] **10.1. Relatório de Itens por Sala/Responsável**
-    -   [ ] **10.1.1.** Gerar listas simples de itens agrupados por sala
-    -   [ ] **10.1.2.** Gerar listas simples de itens agrupados por responsável
+-   [ ] **11.1. Relatório de Itens por Sala/Responsável**
+    -   [ ] **11.1.1.** Gerar listas simples de itens agrupados por sala
+    -   [ ] **11.1.2.** Gerar listas simples de itens agrupados por responsável
 
--   [ ] **10.2. Relatório de Itens Não Encontrados**
-    -   [ ] **10.2.1.** Listar todos os itens de uma sala que não foram escaneados durante uma sessão de "Escaneamento em Lotes"
+-   [ ] **11.2. Relatório de Itens Não Encontrados**
+    -   [ ] **11.2.1.** Listar todos os itens de uma sala que não foram escaneados durante uma sessão de "Escaneamento em Lotes"
 
 ---
 
-### Etapa 11: Dashboard e Visão Geral
+### Etapa 12: Dashboard e Visão Geral
 
 **Objetivo:** Criar interface de visão geral com métricas e estatísticas.
 
--   [ ] **11.1. Tela Inicial Aprimorada**
-    -   [ ] **11.1.1.** Criar dashboard simples com métricas úteis
-    -   [ ] **11.1.2.** Exibir "Itens atualizados hoje"
-    -   [ ] **11.1.3.** Exibir "Última sincronização com SUAP"
-    -   [ ] **11.1.4.** Adicionar outras métricas relevantes para o usuário
+-   [ ] **12.1. Tela Inicial Aprimorada**
+    -   [ ] **12.1.1.** Criar dashboard simples com métricas úteis
+    -   [ ] **12.1.2.** Exibir "Itens atualizados hoje"
+    -   [ ] **12.1.3.** Exibir "Última sincronização com SUAP"
+    -   [ ] **12.1.4.** Adicionar outras métricas relevantes para o usuário

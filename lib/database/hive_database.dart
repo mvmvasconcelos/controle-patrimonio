@@ -4,6 +4,7 @@ import '../models/patrimonio.dart';
 class HiveDatabase {
   static const String patrimonioBoxName = 'patrimonio_box';
   static const String settingsBoxName = 'settings_box';
+  static const String rawDataBoxName = 'raw_data_box';
 
   static Future<void> init() async {
     // Inicializar Hive
@@ -15,6 +16,7 @@ class HiveDatabase {
     // Abrir boxes
     await Hive.openBox<Patrimonio>(patrimonioBoxName);
     await Hive.openBox(settingsBoxName);
+    await Hive.openBox<Map>(rawDataBoxName);
 
     // Seed de desenvolvimento: garantir que exista um patrimônio mock
     // válido para testes (número 253170). Não sobrescreve se já existir.
@@ -54,6 +56,15 @@ class HiveDatabase {
   }
   static set settingsBox(Box box) {
     _settingsBox = box;
+  }
+
+  // Box para dados brutos originais do CSV/XLS (chave = numeroPatrimonio)
+  static Box<Map> get rawDataBox => Hive.box<Map>(rawDataBoxName);
+
+  static Map<String, String>? getRawRow(String numeroPatrimonio) {
+    final raw = rawDataBox.get(numeroPatrimonio);
+    if (raw == null) return null;
+    return raw.cast<String, String>();
   }
 
   // Métodos para gerenciar dados do patrimônio
@@ -103,6 +114,32 @@ class HiveDatabase {
 
   static Future<void> deletePatrimonio(Patrimonio patrimonio) async {
     await patrimonio.delete();
+  }
+
+  // Importa dados de planilha: substitui tudo, preserva raw data
+  static Future<void> importData(
+    List<Patrimonio> patrimonios,
+    List<Map<String, String>> rawRows,
+  ) async {
+    // Substituir todos os patricmônios
+    final pBox = patrimonioBox;
+    await pBox.clear();
+    await pBox.addAll(patrimonios);
+
+    // Substituir raw data
+    final rBox = rawDataBox;
+    await rBox.clear();
+    for (final row in rawRows) {
+      final numero = row['NUMERO'] ?? '';
+      if (numero.isNotEmpty) {
+        await rBox.put(numero, row);
+      }
+    }
+  }
+
+  // Verifica se há itens modificados pendentes de exportação
+  static bool hasPendingModifications() {
+    return patrimonioBox.values.any((p) => p.isModified);
   }
 
   // Métodos para configurações
