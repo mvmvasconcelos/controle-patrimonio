@@ -142,10 +142,8 @@ flutter pub get --offline 2>/dev/null || flutter pub get
 log_info "Compilando APK (isso pode demorar alguns minutos)..."
 
 cd android
-if ./gradlew assembleRelease --offline 2>/dev/null; then
-  log_success "APK compilado (modo offline)"
-elif ./gradlew assembleRelease; then
-  log_success "APK compilado (modo online)"
+if ./gradlew assembleRelease --no-build-cache --no-parallel; then
+  log_success "APK compilado"
 else
   log_error "Falha na compilação com Gradle"
   cd ..

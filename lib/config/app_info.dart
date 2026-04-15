@@ -29,14 +29,19 @@ class AppInfo {
       
       debugPrint('AppInfo inicializado: $appName v$version+$buildNumber');
       
-      // Configurar a data como a data atual (ou poderíamos armazená-la em algum lugar)
-      final dateFormat = DateFormat('dd \'de\' MMMM \'de\' yyyy', 'pt_BR');
-      releaseDate = dateFormat.format(DateTime.now());
+      // Configurar a data como a data atual
+      // Usar formato simples para evitar dependência de locales do sistema
+      final now = DateTime.now();
+      final months = [
+        'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+        'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'
+      ];
+      releaseDate = '${now.day} de ${months[now.month - 1]} de ${now.year}';
       _initialized = true;
     } catch (e) {
       debugPrint('Erro ao carregar informações do app: $e');
-      // Usar os valores padrão em caso de erro
-      releaseDate = 'Novembro de 2025';
+      // Usar valor padrão em caso de erro - será atualizado dinamicamente
+      releaseDate = 'data indisponível';
     }
   }
   

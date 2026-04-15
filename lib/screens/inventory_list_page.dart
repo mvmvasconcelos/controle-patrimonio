@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/patrimonio.dart';
 import '../providers/patrimonio_provider.dart';
+import '../widgets/scanned_item_modal.dart';
 
 class InventoryListPage extends StatefulWidget {
-  const InventoryListPage({super.key});
+  final bool initialOnlyModified;
+
+  const InventoryListPage({super.key, this.initialOnlyModified = false});
 
   @override
   State<InventoryListPage> createState() => _InventoryListPageState();
@@ -15,6 +18,12 @@ class _InventoryListPageState extends State<InventoryListPage> {
   String _query = '';
   String? _filterSala;
   bool _onlyModified = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _onlyModified = widget.initialOnlyModified;
+  }
 
   @override
   void dispose() {
@@ -106,6 +115,33 @@ class _InventoryListPageState extends State<InventoryListPage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _editItem(BuildContext context, Patrimonio patrimonio) {
+    final provider = context.read<PatrimonioProvider>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ScannedItemModal(
+        patrimonio: patrimonio,
+        selectedSala: null,
+        onSave: (updated) {
+          final changes = <String, dynamic>{};
+          if (patrimonio.descricao != updated.descricao)
+            changes['descricao'] = updated.descricao;
+          if (patrimonio.sala != updated.sala) changes['sala'] = updated.sala;
+          if (patrimonio.responsavel != updated.responsavel)
+            changes['responsavel'] = updated.responsavel;
+          if (patrimonio.situacao != updated.situacao)
+            changes['situacao'] = updated.situacao;
+          if (patrimonio.observacoes != updated.observacoes)
+            changes['observacoes'] = updated.observacoes;
+          if (changes.isNotEmpty)
+            provider.updatePatrimonio(patrimonio, changes);
+        },
       ),
     );
   }
@@ -231,7 +267,10 @@ class _InventoryListPageState extends State<InventoryListPage> {
                             const Divider(height: 1, indent: 16, endIndent: 16),
                         itemBuilder: (context, index) {
                           final p = filtered[index];
-                          return _ItemTile(patrimonio: p);
+                          return _ItemTile(
+                            patrimonio: p,
+                            onTap: () => _editItem(context, p),
+                          );
                         },
                       ),
               ),
@@ -245,7 +284,9 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
 class _ItemTile extends StatelessWidget {
   final Patrimonio patrimonio;
-  const _ItemTile({required this.patrimonio});
+  final VoidCallback? onTap;
+
+  const _ItemTile({required this.patrimonio, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -253,6 +294,7 @@ class _ItemTile extends StatelessWidget {
     final modifiedFields = p.modifiedFields?.keys.toList() ?? [];
 
     return ListTile(
+      onTap: onTap,
       leading: CircleAvatar(
         backgroundColor: p.isModified
             ? Colors.amber.shade100

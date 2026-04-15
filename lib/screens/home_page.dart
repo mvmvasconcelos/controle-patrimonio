@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/patrimonio_provider.dart';
 import 'individual_scan_page.dart';
 import 'batch_scan_page.dart';
+import 'inventory_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,59 +29,8 @@ class _HomePageState extends State<HomePage> {
         title: const Text('Controle Patrimônio'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.upload_file),
-            onPressed: () => Navigator.pushNamed(context, '/data'),
-            tooltip: 'Importar / Exportar planilha',
-          ),
-          IconButton(
-            icon: const Icon(Icons.sync),
-            onPressed: _syncData,
-            tooltip: 'Sincronizar dados',
-          ),
-          Consumer<PatrimonioProvider>(
-            builder: (context, provider, _) {
-              final count = provider.patrimonios.where((p) => p.isModified).length;
-              return Stack(
-                alignment: Alignment.center,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.table_chart),
-                    onPressed: () => Navigator.pushNamed(context, '/report'),
-                    tooltip: 'Relatório de alterações',
-                  ),
-                  if (count > 0)
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '$count',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.info),
-            onPressed: _showAbout,
-            tooltip: 'Sobre',
-          ),
-        ],
       ),
+      drawer: _buildDrawer(context),
       body: Consumer<PatrimonioProvider>(
         builder: (context, provider, child) {
           if (provider.isLoading) {
@@ -97,26 +47,69 @@ class _HomePageState extends State<HomePage> {
           }
 
           if (provider.error != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Erro: ${provider.error}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      provider.clearError();
-                      provider.syncWithBackend();
-                    },
-                    child: const Text('Tentar Novamente'),
-                  ),
-                ],
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('Controle Patrimônio'),
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    provider.clearError();
+                  },
+                ),
+              ),
+              drawer: _buildDrawer(context),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.cloud_off, size: 64, color: Colors.orange),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Falha na sincronização',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        'Não foi possível conectar ao servidor. Verifique sua conexão de internet e tente novamente.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            provider.clearError();
+                          },
+                          icon: const Icon(Icons.close),
+                          label: const Text('Descartar'),
+                        ),
+                        const SizedBox(width: 12),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            provider.clearError();
+                            provider.syncWithBackend();
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Tentar Novamente'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -190,7 +183,24 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
 
-                const SizedBox(height: 48),
+                const SizedBox(height: 16),
+
+                OutlinedButton.icon(
+                  onPressed: () => Navigator.pushNamed(context, '/inventory'),
+                  icon: const Icon(Icons.list_alt),
+                  label: const Text(
+                    'Ver Inventário',
+                    style: TextStyle(fontSize: 16),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 32),
 
                 // Estatísticas rápidas
                 if (provider.hasData) ...[
@@ -206,23 +216,132 @@ class _HomePageState extends State<HomePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildStatCard(
-                        'Total',
-                        provider.patrimonios.length.toString(),
-                        Icons.inventory,
-                        Colors.blue,
+                      GestureDetector(
+                        onTap: () => Navigator.pushNamed(context, '/inventory'),
+                        child: _buildStatCard(
+                          'Total',
+                          provider.patrimonios.length.toString(),
+                          Icons.inventory,
+                          Colors.blue,
+                        ),
                       ),
-                      _buildStatCard(
-                        'Modificados',
-                        provider.getStatistics()['modified'].toString(),
-                        Icons.edit,
-                        Colors.orange,
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const InventoryListPage(
+                              initialOnlyModified: true,
+                            ),
+                          ),
+                        ),
+                        child: _buildStatCard(
+                          'Modificados',
+                          provider.getStatistics()['modified'].toString(),
+                          Icons.edit,
+                          Colors.orange,
+                        ),
                       ),
                     ],
                   ),
                 ],
               ],
             ),
+          );
+        },
+      ),
+    );
+  }
+
+  Drawer _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: Consumer<PatrimonioProvider>(
+        builder: (context, provider, _) {
+          final modifiedCount =
+              provider.patrimonios.where((p) => p.isModified).length;
+          return ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    const Icon(Icons.inventory_2,
+                        color: Colors.white, size: 40),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Controle Patrimônio',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'IFSUL',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.list_alt),
+                title: const Text('Inventário'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/inventory');
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.upload_file),
+                title: const Text('Importar / Exportar'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/data');
+                },
+              ),
+              ListTile(
+                leading: Badge(
+                  isLabelVisible: modifiedCount > 0,
+                  label: Text('$modifiedCount'),
+                  child: const Icon(Icons.table_chart),
+                ),
+                title: const Text('Relatório de alterações'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/report');
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.sync),
+                title: const Text('Sincronizar com servidor'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _syncData();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.storage),
+                title: const Text('Gerenciar Dados e Cache'),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/data');
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.info_outline),
+                title: const Text('Sobre / Atualizações'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAbout();
+                },
+              ),
+            ],
           );
         },
       ),

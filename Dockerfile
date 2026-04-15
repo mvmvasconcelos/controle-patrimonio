@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
 ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 # Flutter version (pin for reproducibility)
-ENV FLUTTER_VERSION=3.19.6
+ENV FLUTTER_VERSION=3.29.2
 ENV FLUTTER_HOME=/opt/flutter
 ENV PATH="$FLUTTER_HOME/bin:$PATH"
 
@@ -42,7 +42,9 @@ RUN mkdir -p $ANDROID_HOME/cmdline-tools && cd /tmp && \
 
 # Install SDK components and accept licenses
 RUN yes | sdkmanager --licenses || true && \
-  sdkmanager "platform-tools" "platforms;android-30" "platforms;android-33" "build-tools;30.0.3" "build-tools;33.0.2" || true
+  sdkmanager "platform-tools" \
+    "platforms;android-33" "platforms;android-34" "platforms;android-35" \
+    "build-tools;33.0.2" "build-tools;34.0.0" || true
 
 # Configure flutter for web
 RUN flutter doctor || true

@@ -41,6 +41,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/app/.cxx/
 
 # Android signing keys
 /android/key.properties
@@ -53,3 +54,6 @@ tools/
 proxy.log
 test_proxy.log
 nc_out.txt
+
+# Session/local troubleshooting notes
+problema_build.md

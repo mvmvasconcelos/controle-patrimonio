@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:csv/csv.dart';
+import 'package:excel/excel.dart';
 import 'package:flutter/foundation.dart';
 import 'package:spreadsheet_decoder/spreadsheet_decoder.dart';
 import '../models/patrimonio.dart';
@@ -53,32 +54,59 @@ class ImportService {
   // ── XLS / XLSX ─────────────────────────────────────────
   static Future<ImportResult> _importExcel(File file) async {
     final bytes = await file.readAsBytes();
-    late SpreadsheetDecoder decoder;
+
+    // Tentativa 1: pacote excel (suporta XLSX e alguns XLS)
     try {
-      decoder = SpreadsheetDecoder.decodeBytes(bytes);
+      final workbook = Excel.decodeBytes(bytes);
+      final sheetName = workbook.tables.keys.first;
+      final sheet = workbook.tables[sheetName]!;
+
+      if (sheet.rows.isEmpty) throw const FormatException('Planilha vazia');
+
+      final headers = sheet.rows.first
+          .map((c) => c?.value?.toString().trim() ?? '')
+          .toList();
+
+      final dataRows = sheet.rows.skip(1).map((row) {
+        return row.map((c) => c?.value?.toString() ?? '').toList();
+      }).toList();
+
+      return _parseRows(headers, dataRows);
     } catch (e) {
-      // Fallback: talvez seja um CSV renomeado como .xls
-      try {
-        return await _importCsv(file);
-      } catch (_) {
-        throw FormatException('Não foi possível ler o arquivo: $e');
-      }
+      debugPrint('[ImportService] excel falhou: $e — tentando spreadsheet_decoder');
     }
 
-    final sheetName = decoder.tables.keys.first;
-    final table = decoder.tables[sheetName]!;
+    // Tentativa 2: spreadsheet_decoder (XLSX / ODS)
+    try {
+      final decoder = SpreadsheetDecoder.decodeBytes(bytes);
+      final sheetName = decoder.tables.keys.first;
+      final table = decoder.tables[sheetName]!;
 
-    if (table.rows.isEmpty) throw const FormatException('Planilha vazia');
+      if (table.rows.isEmpty) throw const FormatException('Planilha vazia');
 
-    final headers = table.rows.first
-        .map((c) => c?.toString().trim() ?? '')
-        .toList();
+      final headers = table.rows.first
+          .map((c) => c?.toString().trim() ?? '')
+          .toList();
 
-    final dataRows = table.rows.skip(1).map((row) {
-      return row.map((c) => c?.toString() ?? '').toList();
-    }).toList();
+      final dataRows = table.rows.skip(1).map((row) {
+        return row.map((c) => c?.toString() ?? '').toList();
+      }).toList();
 
-    return _parseRows(headers, dataRows);
+      return _parseRows(headers, dataRows);
+    } catch (e) {
+      debugPrint('[ImportService] spreadsheet_decoder falhou: $e — tentando CSV');
+    }
+
+    // Tentativa 3: CSV (arquivo .xls que é na verdade texto delimitado)
+    try {
+      return await _importCsv(file);
+    } catch (_) {
+      throw const FormatException(
+        'Não foi possível ler o arquivo.\n'
+        'O formato XLS binário (Excel 97-2003) não é suportado.\n'
+        'Salve o arquivo como .xlsx e tente novamente.',
+      );
+    }
   }
 
   // ── Parser compartilhado ───────────────────────────────
@@ -173,9 +201,9 @@ class ImportService {
   /// Tenta decodificar em UTF-8, fallback Latin-1 (Windows-1252 compat.).
   static String _decodeBytes(Uint8List bytes) {
     try {
-      return String.fromCharCodes(bytes);
+      return utf8.decode(bytes);
     } catch (_) {
-      return utf8.decode(bytes, allowMalformed: true);
+      return latin1.decode(bytes);
     }
   }
 }

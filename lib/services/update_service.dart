@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:install_plugin/install_plugin.dart';
+// install_plugin removido — open_filex cobre a mesma funcionalidade
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -99,10 +99,10 @@ class UpdateService {
     try {
       // Verificar conexão com a internet primeiro
       debugPrint('[UpdateService] Verificando conectividade...');
-      final connectivityResult = await Connectivity().checkConnectivity();
-      debugPrint('[UpdateService] Conectividade: $connectivityResult');
+      final connectivityResults = await Connectivity().checkConnectivity();
+      debugPrint('[UpdateService] Conectividade: $connectivityResults');
       
-      if (connectivityResult == ConnectivityResult.none) {
+      if (connectivityResults.isEmpty || connectivityResults.every((r) => r == ConnectivityResult.none)) {
         _isChecking = false;
         debugPrint('[UpdateService] Sem conexão com a internet');
         return UpdateCheckResult(
@@ -274,8 +274,8 @@ class UpdateService {
     
     try {
       // Verificar conexão com a internet primeiro
-      final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult == ConnectivityResult.none) {
+      final connectivityResults = await Connectivity().checkConnectivity();
+      if (connectivityResults.isEmpty || connectivityResults.every((r) => r == ConnectivityResult.none)) {
         _isDownloading = false;
         return UpdateResult(
           success: false,
@@ -470,21 +470,7 @@ class UpdateService {
           );
         }
 
-        // Estratégia 1: InstallPlugin (versão simples compatível com a biblioteca)
-        try {
-          // A biblioteca install_plugin na versão atual só aceita um argumento
-          await InstallPlugin.installApk(filePath);
-          
-          await Future.delayed(const Duration(milliseconds: 500));
-          return UpdateResult(
-            success: true,
-            message: 'Instalação iniciada',
-          );
-        } catch (e) {
-          // Se a estratégia 1 falhar, tentamos a estratégia 2
-        }
-
-        // Estratégia 2: OpenFilex com configurações básicas
+        // Estratégia 1: OpenFilex com configurações básicas
         try {
           final result = await OpenFilex.open(
             filePath,

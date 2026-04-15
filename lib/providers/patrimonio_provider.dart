@@ -39,10 +39,11 @@ class PatrimonioProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(Uri.parse('$baseUrl/patrimonio'));
+      final response = await http.get(Uri.parse('$baseUrl/api/v1/patrimonio'));
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
+        final Map<String, dynamic> body = json.decode(response.body);
+        final List<dynamic> data = body['items'];
         final patrimonios = data.map((json) => Patrimonio.fromJson(json)).toList();
 
         // Salvar no banco local
@@ -206,6 +207,57 @@ class PatrimonioProvider with ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  // Limpar tudo (dados, cache, modificações)
+  Future<void> clearAllData() async {
+    try {
+      await HiveDatabase.clearAllData();
+      _patrimonios = [];
+      _lastSync = null;
+      _error = null;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Erro ao limpar dados: $e';
+      notifyListeners();
+    }
+  }
+
+  // Resetar apenas as modificações
+  Future<void> resetModifications() async {
+    try {
+      for (final patrimonio in _patrimonios) {
+        if (patrimonio.isModified) {
+          final reset = patrimonio.copyWith(
+            isModified: false,
+            modifiedFields: null,
+            originalValues: null,
+            resetTracking: true,
+          );
+          await HiveDatabase.updatePatrimonio(reset);
+        }
+      }
+      // Recarregar dados
+      await loadLocalData();
+    } catch (e) {
+      _error = 'Erro ao resetar modificações: $e';
+      notifyListeners();
+    }
+  }
+
+  // Obter informações sobre dados armazenados
+  Future<Map<String, dynamic>> getStorageInfo() async {
+    try {
+      final stats = getStatistics();
+      return {
+        'total': stats['total'] ?? 0,
+        'modified': stats['modified'] ?? 0,
+        'synced': stats['synced'] ?? 0,
+        'lastSync': _lastSync?.toString() ?? 'Nunca',
+      };
+    } catch (e) {
+      return {'error': 'Erro ao obter informações: $e'};
+    }
   }
 
   // Obter estatísticas

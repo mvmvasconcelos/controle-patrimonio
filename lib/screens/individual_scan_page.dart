@@ -34,7 +34,7 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -103,11 +103,15 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
 
             // Resultado da busca
             if (_isLoading)
-              const Center(child: CircularProgressIndicator())
+              const Padding(
+                padding: EdgeInsets.only(top: 32),
+                child: Center(child: CircularProgressIndicator()),
+              )
             else if (_patrimonioEncontrado != null)
               _buildPatrimonioCard()
             else
-              const Expanded(
+              const Padding(
+                padding: EdgeInsets.only(top: 48),
                 child: Center(
                   child: Text(
                     'Digite o número do patrimônio ou use o scanner',
@@ -127,15 +131,14 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
   // Se o usuário não informou uma sala (null), não marcamos como diferente
   final isSalaDiferente = widget.selectedSala != null && patrimonio.sala != widget.selectedSala;
 
-    return Expanded(
-      child: Card(
-        elevation: 4,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+    return Card(
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
                 children: [
                   const Icon(Icons.inventory, color: Colors.blue, size: 32),
                   const SizedBox(width: 8),
@@ -171,21 +174,20 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
               _buildField('Situação', patrimonio.situacao),
 
               if (patrimonio.observacoes != null && patrimonio.observacoes!.isNotEmpty)
-                _buildField('Observações', patrimonio.observacoes!),
+            _buildField('Observações', patrimonio.observacoes!),
 
-              const Spacer(),
+            const SizedBox(height: 16),
 
-              // Botões de ação
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _editarPatrimonio(context, patrimonio),
-                  icon: const Icon(Icons.edit),
-                  label: const Text('Editar'),
-                ),
+            // Botões de ação
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _editarPatrimonio(context, patrimonio),
+                icon: const Icon(Icons.edit),
+                label: const Text('Editar'),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

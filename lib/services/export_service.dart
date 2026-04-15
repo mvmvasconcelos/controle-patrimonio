@@ -139,7 +139,19 @@ class ExportService {
     String suffix,
   ) async {
     final excel = Excel.createExcel();
-    excel.delete('Sheet1');
+    final defaultSheet = excel.getDefaultSheet();
+    if (defaultSheet != null && defaultSheet != 'Relatório') {
+      excel.rename(defaultSheet, 'Relatório');
+    }
+
+    // Garante que o arquivo final tenha somente uma aba.
+    final extraSheets = List<String>.from(excel.tables.keys)
+        .where((name) => name != 'Relatório')
+        .toList();
+    for (final name in extraSheets) {
+      excel.delete(name);
+    }
+
     final sheet = excel['Relatório'];
 
     // Cabeçalho
