@@ -158,9 +158,10 @@ class _InventoryListPageState extends State<InventoryListPage> {
             builder: (context, provider, _) {
               final salas = provider.patrimonios
                   .map((p) => p.sala)
+                  .where((sala) => sala.trim().isNotEmpty)
                   .toSet()
                   .toList()
-                ..sort();
+                ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
               final hasFilter = _onlyModified || _filterSala != null;
               return IconButton(
                 icon: Badge(

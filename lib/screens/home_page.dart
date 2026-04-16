@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/patrimonio_provider.dart';
 import 'individual_scan_page.dart';
 import 'batch_scan_page.dart';
-import 'inventory_list_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -199,51 +198,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 32),
-
-                // Estatísticas rápidas
-                if (provider.hasData) ...[
-                  const Text(
-                    'Estatísticas',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, '/inventory'),
-                        child: _buildStatCard(
-                          'Total',
-                          provider.patrimonios.length.toString(),
-                          Icons.inventory,
-                          Colors.blue,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const InventoryListPage(
-                              initialOnlyModified: true,
-                            ),
-                          ),
-                        ),
-                        child: _buildStatCard(
-                          'Modificados',
-                          provider.getStatistics()['modified'].toString(),
-                          Icons.edit,
-                          Colors.orange,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ],
             ),
           );
@@ -329,7 +283,7 @@ class _HomePageState extends State<HomePage> {
                 title: const Text('Gerenciar Dados e Cache'),
                 onTap: () {
                   Navigator.pop(context);
-                  Navigator.pushNamed(context, '/data');
+                  Navigator.pushNamed(context, '/data-cache');
                 },
               ),
               const Divider(),
@@ -344,32 +298,6 @@ class _HomePageState extends State<HomePage> {
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -421,9 +349,10 @@ class _HomePageState extends State<HomePage> {
     final provider = context.read<PatrimonioProvider>();
     final salas = provider.patrimonios
         .map((p) => p.sala)
+        .where((sala) => sala.trim().isNotEmpty)
         .toSet()
         .toList()
-      ..sort();
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
     // Use a local state inside the dialog so the Confirm button can be
     // habilitado apenas quando o usuário escolher uma sala. O botão "Não"

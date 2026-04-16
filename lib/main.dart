@@ -7,6 +7,7 @@ import 'screens/home_page.dart';
 import 'screens/about_page.dart';
 import 'screens/report_page.dart';
 import 'screens/data_management_page.dart';
+import 'screens/cache_management_page.dart';
 import 'screens/inventory_list_page.dart';
 
 void main() async {
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
           '/about': (context) => const AboutPage(),
           '/report': (context) => const ReportPage(),
           '/data': (context) => const DataManagementPage(),
+          '/data-cache': (context) => const CacheManagementPage(),
           '/inventory': (context) => const InventoryListPage(),
         },
       ),

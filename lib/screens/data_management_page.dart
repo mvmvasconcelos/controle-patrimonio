@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:open_filex/open_filex.dart';
 import 'package:provider/provider.dart';
 import '../database/hive_database.dart';
 import '../providers/patrimonio_provider.dart';
@@ -111,22 +110,12 @@ class _DataManagementPageState extends State<DataManagementPage> {
     try {
       final file = await fn();
       if (!mounted) return;
-      final messenger = ScaffoldMessenger.of(context);
-      final result = await OpenFilex.open(
-        file.path,
-        type: _exportFormat == 'xlsx'
-            ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            : 'text/csv',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Planilha exportada com sucesso.\nSalva em: ${file.path}'),
+          duration: const Duration(seconds: 6),
+        ),
       );
-      if (!mounted) return;
-      if (result.type != ResultType.done) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text('Arquivo salvo em:\n${file.path}'),
-            duration: const Duration(seconds: 6),
-          ),
-        );
-      }
     } catch (e) {
       if (!mounted) return;
       _showError('Erro ao exportar: $e');
@@ -172,106 +161,12 @@ class _DataManagementPageState extends State<DataManagementPage> {
     );
   }
 
-  void _showResetModificationsDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext ctx) => AlertDialog(
-        title: const Text('Resetar Modificações?'),
-        content: const Text(
-          'Isso descartará todas as alterações feitas nos itens e os restaurará para o estado anterior.\n\n'
-          'Esta ação pode ser desfeita sincronizando com o servidor novamente.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              final provider = context.read<PatrimonioProvider>();
-              await provider.resetModifications();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('✓ Modificações resetadas com sucesso'),
-                    backgroundColor: Colors.green,
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-                setState(() {});
-              }
-            },
-            child: const Text(
-              'Resetar',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showClearAllDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext ctx) => AlertDialog(
-        title: const Text('Limpar TUDO?'),
-        content: const Text(
-          'Isso removerá TODOS os dados armazenados localmente, incluindo:\n\n'
-          '• Todos os itens importados\n'
-          '• Todas as modificações\n'
-          '• Histórico de sincronização\n\n'
-          'Esta ação NÃO pode ser desfeita. Para recuperar os dados, você precisará importar a planilha novamente.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              setState(() => _isExporting = true);
-              try {
-                final provider = context.read<PatrimonioProvider>();
-                await provider.clearAllData();
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('✓ Todos os dados foram limpos'),
-                      backgroundColor: Colors.green,
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                  setState(() {});
-                }
-              } catch (e) {
-                if (mounted) {
-                  _showError('Erro ao limpar dados: $e');
-                }
-              } finally {
-                if (mounted) setState(() => _isExporting = false);
-              }
-            },
-            child: const Text(
-              'Limpar Tudo',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ── Build ───────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gerenciar Dados'),
+        title: const Text('Importar / Exportar'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Theme.of(context).colorScheme.onPrimary,
       ),
@@ -303,63 +198,6 @@ class _DataManagementPageState extends State<DataManagementPage> {
               ],
 
               const SizedBox(height: 20),
-
-              // ── Limpeza e Manutenção ────────────────────
-              const _SectionHeader(
-                icon: Icons.cleaning_services,
-                label: 'Limpeza e Manutenção',
-                color: Colors.red,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Use estas opções com cuidado durante testes e desenvolvimento.',
-                style: TextStyle(color: Colors.grey, fontSize: 13),
-              ),
-              const SizedBox(height: 12),
-              
-              // Botão para resetar modificações
-              ElevatedButton.icon(
-                onPressed: modifiedCount > 0 ? () => _showResetModificationsDialog() : null,
-                icon: const Icon(Icons.restart_alt),
-                label: Text(
-                  modifiedCount > 0
-                      ? 'Resetar Modificações ($modifiedCount)'
-                      : 'Nenhuma modificação',
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(48),
-                  disabledBackgroundColor: Colors.grey[300],
-                ),
-              ),
-              const SizedBox(height: 12),
-              
-              // Botão para limpar tudo
-              ElevatedButton.icon(
-                onPressed: _isImporting || _isExporting
-                    ? null
-                    : () => _showClearAllDialog(),
-                icon: _isImporting || _isExporting
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Icon(Icons.delete_sweep),
-                label: Text(
-                  _isImporting || _isExporting ? 'Processando...' : 'Limpar Tudo',
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(48),
-                  disabledBackgroundColor: Colors.grey[300],
-                ),
-              ),
 
               const SizedBox(height: 28),
               const Divider(),
