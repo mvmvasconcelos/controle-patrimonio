@@ -283,15 +283,9 @@ class UpdateService {
         );
       }
       
-      // Verificar e solicitar permissões necessárias
-      final bool hasPermission = await _checkAndRequestPermissions();
-      if (!hasPermission) {
-        _isDownloading = false;
-        return UpdateResult(
-          success: false,
-          message: 'Permissões necessárias não foram concedidas',
-        );
-      }
+      // Em Android moderno, a autorização para instalar APK de fonte desconhecida
+      // pode ser concedida durante o fluxo do sistema. Não bloqueamos o download aqui.
+      await _checkAndRequestPermissions();
       
       // Usar o diretório de Downloads para salvar o APK (mais confiável que o diretório temp)
       Directory? storageDir;
@@ -429,17 +423,15 @@ class UpdateService {
   // Verifica e solicita permissões necessárias
   Future<bool> _checkAndRequestPermissions() async {
     if (Platform.isAndroid) {
-      // No Android 13+, precisamos de permissão para instalar pacotes
-      if (await Permission.requestInstallPackages.request().isGranted) {
-        return true;
+      try {
+        // Tentamos solicitar por compatibilidade, mas não usamos este retorno para
+        // bloquear o fluxo de download. A instalação pode abrir a tela de permissão.
+        await Permission.requestInstallPackages.request();
+      } catch (_) {
+        // Ignora falhas de solicitação de permissão para manter o fluxo.
       }
-      
-      // No Android mais antigo, verificamos permissão de armazenamento
-      if (await Permission.storage.request().isGranted) {
-        return true;
-      }
-      
-      return false;
+
+      return true;
     }
     
     // Em outras plataformas, assumimos que temos permissão
@@ -505,7 +497,7 @@ class UpdateService {
         } catch (e) {
           return UpdateResult(
             success: false,
-            message: 'Não foi possível iniciar a instalação',
+            message: 'Não foi possível iniciar a instalação. Verifique se a opção "Instalar apps desconhecidos" está habilitada para este aplicativo.',
             error: e.toString(),
           );
         }

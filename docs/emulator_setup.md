@@ -86,8 +86,11 @@ O script `emulador.sh` agora faz tudo: inicia o proxy (se necessário) e conecta
 ### Passo 2: Rodar o App
 Agora é só usar o Flutter normalmente via Docker:
 ```bash
-docker-compose run --rm flutter flutter run
+docker-compose exec -T flutter sh -lc "flutter run"
 ```
+
+> Se o container `flutter` nao estiver rodando, suba antes com:
+> `docker-compose up -d flutter`
 
 ## 5. Solução de Problemas
 

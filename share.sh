@@ -5,7 +5,7 @@ set -euo pipefail
 # Script de Compartilhamento APK - Controle Patrimônio
 # ============================================
 # Propósito: Servir APK via servidor HTTP temporário
-# Uso: ./compartilha.sh
+# Uso: ./share.sh
 
 # Configurações
 readonly SERVER_HOST="128.1.1.49"
@@ -31,7 +31,7 @@ log_warning() { echo -e "${COLOR_WARNING}[WARNING]${COLOR_RESET} $1"; }
 check_apk_exists() {
   if ! docker-compose exec -T flutter test -f "web/apk/${APK_NAME}" 2>/dev/null; then
     log_error "APK não encontrado!"
-    log_info "Execute primeiro: ./compilaApk.sh"
+    log_info "Execute primeiro: ./compila.sh"
     return 1
   fi
   return 0

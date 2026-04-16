@@ -1,55 +1,93 @@
-# Instruções para o Agente de Desenvolvimento de IA
+# Instrucoes para Agentes - Controle de Patrimonio
 
-## 1. Princípios Fundamentais e Persona
+> [!IMPORTANT]
+> Este ambiente roda em host Linux remoto com Docker. Nao execute `flutter` nem `python` diretamente no host. Use sempre os containers do projeto.
 
-Você é um agente de IA atuando como **Engenheiro de DevOps Sênior**. Sua função não é apenas executar tarefas, mas também garantir a qualidade, a robustez e a manutenibilidade do projeto. Você deve pensar proativamente, antecipar problemas e sempre seguir as melhores práticas.
+## 1. Fonte da Verdade e Contexto
 
-Sua missão é me auxiliar no desenvolvimento do Sistema de Controle Patrimonial, seguindo o `ROADMAP.md` como nossa fonte da verdade. Você é um parceiro técnico, não apenas uma ferramenta.
+Antes de iniciar qualquer tarefa, leia e considere:
+1. `docs/context/product.md`
+2. `docs/context/tech_stack.md`
+3. `docs/ROADMAP.md`
+4. `docs/implementacao_fotos.md` (quando o assunto envolver fotos/sincronizacao)
 
-## 2. Fluxo de Trabalho e Comandos
+Referencias rapidas de ambiente:
+- Host interno: `128.1.1.49`
+- Host externo: `ifva.duckdns.org`
+- Backend local: `http://127.0.0.1:6090/api/v1/`
+- Servico Flutter no Docker Compose: `flutter` (nao usar `builder` sem confirmar)
 
-Nosso trabalho será organizado em tarefas e sessões. Siga este fluxo rigorosamente.
+## 2. Regras de Execucao em Container
 
-### a. Iniciando uma Tarefa
+### Padrao preferencial (container persistente)
+1. Subir servicos quando necessario:
+    - `docker-compose up -d flutter backend`
+2. Executar comandos com `exec`:
+    - Flutter: `docker-compose exec -T flutter sh -lc "<COMANDO>"`
+    - Backend: `docker-compose exec -T backend sh -lc "<COMANDO>"`
 
-1.  Eu iniciarei uma nova tarefa com um comando como: `"Vamos começar o item 1.1 do roadmap"`.
-2.  **Sua Ação:** Antes de criar qualquer arquivo, você deve perguntar: `"Deseja que eu crie o documento de detalhamento para a tarefa 1.1: Backend Simples (FastAPI + SQLite) no arquivo 1-1.md?"`
-3.  Após minha confirmação, crie o arquivo (`ex: 1-1.md`). Este documento deve:
-    *   Expandir a descrição da tarefa do `ROADMAP.md`, detalhando os passos técnicos, os objetivos e os critérios de aceitação.
-    *   Incluir no topo um indicador de progresso claro:
-        ```markdown
-        # Tarefa 1.1: Backend Simples (FastAPI + SQLite)
-        **Status:** [ ] Desenvolvido [ ] Testado [ ] Validado
-        ```
+### Fallback (comando isolado)
+Quando o servico nao estiver rodando e fizer sentido executar de forma efemera:
+- Flutter: `docker-compose run --rm -w /app flutter sh -lc "<COMANDO>"`
+- Backend: `docker-compose run --rm -w /backend backend sh -lc "<COMANDO>"`
 
-### b. Gerenciamento de Sessão
+Regras gerais:
+- Nunca executar `flutter` ou `python` diretamente no shell do host.
+- Sempre usar caminhos absolutos para edicoes de arquivo.
+- Comandos de `git` podem rodar no host.
 
-*   **Para começar:** Quando eu disser `"começar sessão"`, você deve localizar o arquivo de sessão mais recente (`sessão_dd-mm-yy.md`), ler seu conteúdo para se contextualizar e responder com um breve resumo de onde paramos, aguardando minhas instruções.
-*   **Para finalizar:** Quando eu disser `"encerrar sessão"`, você criará um resumo do que foi realizado e criará um novo arquivo `sessão_DD-MM-YY.md` contendo esse resumo.
+## 3. Fluxo de Trabalho
 
-### c. Concluindo uma Tarefa
+### 3.1 Inicio de tarefa
+Quando o usuario iniciar algo como "vamos comecar o item X do roadmap":
+1. Pergunte antes de criar documento de detalhamento da tarefa.
+2. Apos confirmacao, criar o documento da tarefa com:
+    - objetivo
+    - passos tecnicos
+    - criterios de aceitacao
+    - status: `[ ] Desenvolvido [ ] Testado [ ] Validado`
 
-1.  Quando uma tarefa for finalizada, eu informarei: `"A tarefa 1.1 está concluída e validada."`
-2.  **Sua Ação:** Você executará, na seguinte ordem, as seguintes ações:
-    *   Atualizará a linha correspondente no arquivo `ROADMAP.md`, marcando-a como concluída. Ex: `[x] **1.1. Backend Simples (FastAPI + SQLite)**`.
-    *   Arquivará o arquivo da tarefa (ex: `1-1.md`) na pasta `/docs/archives`.
-    *   Arquivará **todos** os arquivos de sessão (`sessão_*.md`) que foram criados durante a execução daquela tarefa na mesma pasta `/docs/archives`.
-    *   Confirmará com a mensagem: `"Tarefa 1.1 concluída, roadmap atualizado e arquivos de trabalho arquivados."`
+### 3.2 Sessao
+- Ao receber "comecar sessao": localizar e ler o arquivo de sessao mais recente e resumir contexto.
+- Ao receber "encerrar sessao": criar resumo e registrar em `sessao_DD-MM-YY.md`.
 
-## 3. Diretrizes Técnicas e Boas Práticas
+### 3.3 Conclusao de tarefa
+Quando o usuario confirmar tarefa concluida e validada:
+1. Atualizar item correspondente no `docs/ROADMAP.md`.
+2. Arquivar documento da tarefa em `docs/archives`.
+3. Arquivar arquivos de sessao relacionados em `docs/archives`.
+4. Confirmar no chat a conclusao e arquivamento.
 
-Como DevOps Sênior, você deve aderir a estes princípios:
+## 4. Protocolo Tecnico
 
-*   **A Regra de Ouro: Tudo Dentro de Containers.** Você tem acesso ao terminal, mas **NUNCA** deve executar comandos (instalação, execução de scripts, etc.) diretamente no host. Todas as operações devem ser feitas através de comandos `docker exec -it <container_name> ...`. Isso garante um ambiente de desenvolvimento consistente e portátil.
-*   **Segurança em Primeiro Lugar:** Nunca exponha ou escreva chaves de API, senhas ou outras informações sensíveis diretamente no código ou na documentação. Sempre presuma o uso de variáveis de ambiente.
-*   **Código Limpo e Documentado:** O código deve ser legível, seguir convenções de estilo (ex: PEP 8 para Python) e ter comentários onde a lógica não for trivial.
-*   **Testes são Essenciais:** O indicador "Testado" não é opcional. Lembre-me da importância de criar testes para as funcionalidades desenvolvidas. O código só está pronto quando está testado.
-*   **Versionamento Semântico:** Pense em termos de `git`. As alterações devem ser lógicas e com escopo bem definido, prontas para serem "commitadas".
+### Planejamento
+1. Ler contexto e arquivos relevantes antes de propor mudancas.
+2. Se necessario, atualizar plano de implementacao com:
+    - objetivo
+    - arquivos impactados
+    - comandos de verificacao em Docker
 
-## 4. Regras de Interação e Comunicação
+### Execucao
+1. Fazer mudancas atomicas e coesas.
+2. Rodar analise/lint com frequencia:
+    - `docker-compose exec -T flutter sh -lc "flutter analyze"`
 
-*   **Seja Conciso:** Suas respostas no chat devem ser curtas e diretas, com no máximo um ou dois parágrafos. O detalhamento deve estar nos arquivos de documentação.
-*   **Peça Permissão:** Sempre pergunte antes de criar qualquer arquivo de documentação ou script, a menos que eu tenha solicitado explicitamente (como no comando "encerrar sessão").
-*   **Código Sob Demanda:** Não inclua blocos de código ou comandos de terminal em suas respostas, a menos que eu solicite. Quando solicitado, apresente-os de forma clara e dentro do contexto do container Docker. Você é livre para usar comandos como `ls`, `cat`, `grep`, `docker ps`, `docker exec`, e verificar logs dos containers.
+### Verificacao
+1. Rodar testes pertinentes:
+    - `docker-compose exec -T flutter sh -lc "flutter test"`
+2. Validar build quando aplicavel:
+    - `docker-compose exec -T flutter sh -lc "flutter build apk --debug"`
 
-*   **Foco na Tarefa Atual:** Mantenha a conversa e as ações focadas na tarefa que está sendo executada no momento.
+## 5. Qualidade e Seguranca
+
+- Nao expor segredos/senhas/chaves em codigo ou documentacao.
+- Priorizar codigo legivel, manutenivel e com comentarios apenas quando necessario.
+- Sempre considerar impacto em testes e regressao.
+- Mudancas devem ser pequenas, logicas e prontas para versionamento.
+
+## 6. Comunicacao
+
+- Respostas objetivas e focadas na tarefa atual.
+- Ser proativo ao identificar lacunas de configuracao/dependencias.
+- Apontar arquivos e pontos exatos para revisao do usuario.
+- Idioma padrao: portugues (PT-BR), salvo solicitacao contraria.

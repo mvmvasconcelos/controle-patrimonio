@@ -1,38 +1,44 @@
-# Tech Stack Context
+# Contexto Tecnico
 
-## Architecture Overview
-The system follows a classic **Client-Server** model but with a heavy "Thick Client" approach due to the offline-first requirement.
+## Visao de Arquitetura
+O sistema esta em **transicao para arquitetura hibrida**:
+1. **Prioridade atual**: fluxo offline no app (importar planilha, editar, exportar alteracoes).
+2. **Em evolucao**: sincronizacao assistida por backend e suporte a fotos.
 
-### Frontend (Mobile App)
-*   **Framework**: Flutter (Dart).
-*   **State Management**: `Provider` (Simple, scoped access).
-*   **Local Database**: `Hive` (NoSQL, key-value, extremely fast for read-heavy workloads).
-*   **Architecture Pattern**:
-    *   **Screens**: UI Components.
-    *   **Providers**: Business Logic & State glue.
-    *   **Services/Repositories**: Data fetching (API/Hive).
-    *   **Models**: Data transfer objects (`.dart` classes with `fromJson`).
+Na pratica, o app precisa continuar funcional offline enquanto as capacidades de sincronizacao sao introduzidas gradualmente.
+
+### Frontend (App Mobile)
+- **Framework**: Flutter (Dart).
+- **Gerenciamento de estado**: `Provider`.
+- **Base local**: `Hive` (NoSQL chave-valor, rapido para leitura).
+- **Padrao de camadas**:
+    - **Screens**: componentes de interface.
+    - **Providers**: estado e regras de negocio.
+    - **Services/Repositories**: acesso a dados (API/Hive/arquivos).
+    - **Models**: objetos de transferencia de dados (`fromJson`, etc.).
 
 ### Backend (API)
-*   **Framework**: FastAPI (Python).
-*   **Database**: SQLite (Stored locally on the server filesystem).
-*   **Role**:
-    *   Serve the master list of assets (`GET /patrimonio`).
-    *   Receive updates (`POST /patrimonio/update`).
-    *   Host the static files for the Web version of the app.
+- **Framework**: FastAPI (Python).
+- **Banco**: SQLite no servidor.
+- **Papel no projeto**:
+    - oferecer endpoints de suporte para sincronizacao
+    - receber e persistir alteracoes quando o fluxo de sync estiver habilitado
+    - evoluir para sincronizacao de fotos/imagens por item
+    - apoiar distribuicao de artefatos quando aplicavel
 
-### Infrastructure
-*   **Containerization**: Docker Compose.
-*   **Services**:
-    *   `flutter`: Wrapper for Flutter SDK commands.
-    *   `backend`: Python environment for FastAPI.
-*   **Host**: Remote Linux Server (`IFVA`).
+### Infraestrutura
+- **Containerizacao**: Docker Compose.
+- **Servicos principais**:
+    - `flutter`: ambiente para comandos Flutter.
+    - `backend`: ambiente Python/FastAPI.
+- **Host**: servidor Linux remoto (IFVA).
 
-## Coding Standards
-*   **Linting**: strict Flutter lints (`flutter_lints`).
-*   **Testing**: Unit tests for logic (`flutter test`), Integration tests for Hive.
-*   **Formatting**: Standard Dart format.
+## Padroes de Qualidade
+- **Lint**: `flutter_lints`.
+- **Testes**: `flutter test` e testes de integracao/logica quando aplicavel.
+- **Formatacao**: padrao Dart.
 
-## Key constraints
-1.  **No Direct Host Access**: All commands must run via `docker-compose`.
-2.  **Versioning**: API mismatches must be handled gracefully or avoided.
+## Restricoes-Chave
+1. **Sem execucao direta no host**: comandos tecnicos devem rodar via `docker-compose`.
+2. **Compatibilidade retroativa**: fluxo por planilha offline deve continuar funcionando durante a transicao.
+3. **Controle de versao e contratos**: mudancas de app/API devem evitar incompatibilidades disruptivas.

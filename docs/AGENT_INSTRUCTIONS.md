@@ -1,70 +1,93 @@
-# AI Agent Instructions for Controle de Patrimônio Environment
+# Instrucoes para Agentes - Controle de Patrimonio
 
 > [!IMPORTANT]
-> **READ THIS FIRST**: This environment runs on a Linux remote host using Docker containers. **You DO NOT have direct access to the host's Flutter or Python SDKs.** All commands MUST run inside the appropriate Docker containers.
+> Este ambiente roda em host Linux remoto com Docker. Nao execute `flutter` nem `python` diretamente no host. Use sempre os containers do projeto.
 
-## 1. Context & Architecture (Context-Driven Development)
-We follow a **Context-Driven Development** philosophy.
+## 1. Fonte da Verdade e Contexto
 
-### 🧠 Project Brain (Source of Truth)
-Before starting any task, **read these files** to load the full context:
-1.  **[Product Context](docs/context/product.md)**: Goals, Users, and Domain Language.
-2.  **[Tech Stack](docs/context/tech_stack.md)**: Architecture, Libraries, and Constraints.
-3.  **[Roadmap](../docs/ROADMAP.md)**: Current progress and next steps.
+Antes de iniciar qualquer tarefa, leia e considere:
+1. `docs/context/product.md`
+2. `docs/context/tech_stack.md`
+3. `docs/ROADMAP.md`
+4. `docs/implementacao_fotos.md` (quando o assunto envolver fotos/sincronizacao)
 
-### Server Deployment Info (Quick Ref)
-*   **Host**: `128.1.1.49` (Internal) / `ifva.duckdns.org` (External).
-*   **Backend**: `http://127.0.0.1:6090/api/v1/`.
-*   **Production Build**: Use `docker-compose run --rm flutter ...`.
+Referencias rapidas de ambiente:
+- Host interno: `128.1.1.49`
+- Host externo: `ifva.duckdns.org`
+- Backend local: `http://127.0.0.1:6090/api/v1/`
+- Servico Flutter no Docker Compose: `flutter` (nao usar `builder` sem confirmar)
 
-## 2. Infrastructure & Commands Rules
-You **MUST** use the following command patterns.
+## 2. Regras de Execucao em Container
 
-> [!WARNING]
-> **Service Name Discrepancy**: The User's Global Rules might mention a `builder` container. However, in this project's `docker-compose.yml`, the service is named **`flutter`**. Always use `flutter` unless you verify `builder` exists.
+### Padrao preferencial (container persistente)
+1. Subir servicos quando necessario:
+    - `docker-compose up -d flutter backend`
+2. Executar comandos com `exec`:
+    - Flutter: `docker-compose exec -T flutter sh -lc "<COMANDO>"`
+    - Backend: `docker-compose exec -T backend sh -lc "<COMANDO>"`
 
-### Flutter (Frontend)
-To run ANY Flutter command (`flutter pub get`, `flutter test`, `dart analyze`):
-```bash
-docker-compose run --rm -w /app flutter sh -c "<YOUR COMMAND HERE>"
-```
-**Examples:**
-*   `docker-compose run --rm -w /app flutter sh -c "flutter pub get"`
-*   `docker-compose run --rm -w /app flutter sh -c "flutter test"`
+### Fallback (comando isolado)
+Quando o servico nao estiver rodando e fizer sentido executar de forma efemera:
+- Flutter: `docker-compose run --rm -w /app flutter sh -lc "<COMANDO>"`
+- Backend: `docker-compose run --rm -w /backend backend sh -lc "<COMANDO>"`
 
-### Backend (Python)
-To run ANY Backend command:
-```bash
-docker-compose run --rm -w /backend backend sh -c "<YOUR COMMAND HERE>"
-```
+Regras gerais:
+- Nunca executar `flutter` ou `python` diretamente no shell do host.
+- Sempre usar caminhos absolutos para edicoes de arquivo.
+- Comandos de `git` podem rodar no host.
 
-### General
-*   **Never** try to run `flutter` or `python` directly in the shell.
-*   **Pathing**: Always use absolute paths for file edits.
-*   **Git**: You can run `git` commands directly on the host (e.g., `git status`, `git add`).
+## 3. Fluxo de Trabalho
 
-## 3. Workflow Protocol
+### 3.1 Inicio de tarefa
+Quando o usuario iniciar algo como "vamos comecar o item X do roadmap":
+1. Pergunte antes de criar documento de detalhamento da tarefa.
+2. Apos confirmacao, criar o documento da tarefa com:
+    - objetivo
+    - passos tecnicos
+    - criterios de aceitacao
+    - status: `[ ] Desenvolvido [ ] Testado [ ] Validado`
 
-### Phase 1: Planning (Context Establishment)
-1.  **Explore**: Read `task.md` (create if missing) to understand the current work queue.
-2.  **Analyze**: Read `docker-compose.yml` and key files before proposing a plan.
-3.  **Plan**: Create/Update `implementation_plan.md` with:
-    *   **Goal**: Clear objective.
-    *   **Proposed Changes**: Specific files to touch.
-    *   **Verification**: Exact `docker-compose` commands to verify the fix.
+### 3.2 Sessao
+- Ao receber "comecar sessao": localizar e ler o arquivo de sessao mais recente e resumir contexto.
+- Ao receber "encerrar sessao": criar resumo e registrar em `sessao_DD-MM-YY.md`.
 
-### Phase 2: Execution (Implementation)
-1.  **Atomic Steps**: Edit one file at a time or logically grouped files.
-2.  **Lint Check**: Run `dart analyze` (via Docker) frequently to catch syntactical errors early.
-    *   Command: `docker-compose run --rm -w /app flutter sh -c "flutter analyze"`
+### 3.3 Conclusao de tarefa
+Quando o usuario confirmar tarefa concluida e validada:
+1. Atualizar item correspondente no `docs/ROADMAP.md`.
+2. Arquivar documento da tarefa em `docs/archives`.
+3. Arquivar arquivos de sessao relacionados em `docs/archives`.
+4. Confirmar no chat a conclusao e arquivamento.
 
-### Phase 3: Verification
-1.  **Test**: Run existing tests relevant to your changes.
-2.  **Build**: Verify the app builds (if applicable to the task).
-    *   Command: `docker-compose run --rm -w /app flutter sh -c "flutter build apk --debug"` (or similar).
-3.  **Walkthrough**: Create `walkthrough.md` if the change was significant, documenting what was done.
+## 4. Protocolo Tecnico
 
-## 4. Communication Style
-*   **Be Proactive**: If you see a missing dependency or configuration, fix it (or plan to fix it), don't just complain.
-*   **Be Precise**: When asking the user to review, point to specific lines or files.
-*   **Portuguese/English**: The user communicates in Portuguese. Respond in the language most appropriate or requested, but code/docs are usually in English.
+### Planejamento
+1. Ler contexto e arquivos relevantes antes de propor mudancas.
+2. Se necessario, atualizar plano de implementacao com:
+    - objetivo
+    - arquivos impactados
+    - comandos de verificacao em Docker
+
+### Execucao
+1. Fazer mudancas atomicas e coesas.
+2. Rodar analise/lint com frequencia:
+    - `docker-compose exec -T flutter sh -lc "flutter analyze"`
+
+### Verificacao
+1. Rodar testes pertinentes:
+    - `docker-compose exec -T flutter sh -lc "flutter test"`
+2. Validar build quando aplicavel:
+    - `docker-compose exec -T flutter sh -lc "flutter build apk --debug"`
+
+## 5. Qualidade e Seguranca
+
+- Nao expor segredos/senhas/chaves em codigo ou documentacao.
+- Priorizar codigo legivel, manutenivel e com comentarios apenas quando necessario.
+- Sempre considerar impacto em testes e regressao.
+- Mudancas devem ser pequenas, logicas e prontas para versionamento.
+
+## 6. Comunicacao
+
+- Respostas objetivas e focadas na tarefa atual.
+- Ser proativo ao identificar lacunas de configuracao/dependencias.
+- Apontar arquivos e pontos exatos para revisao do usuario.
+- Idioma padrao: portugues (PT-BR), salvo solicitacao contraria.

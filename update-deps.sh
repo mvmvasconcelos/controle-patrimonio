@@ -150,11 +150,11 @@ show_next_steps() {
   echo ""
   log_info "📋 Próximos passos disponíveis:"
   echo "   ./start.sh               - Gerenciar container Docker"
-  echo "   ./compilaApk.sh          - Compilar APK (incrementa versionCode)"
-  echo "   ./compilaApk.sh patch    - Compilar com versão patch"
-  echo "   ./compilaApk.sh minor    - Compilar com versão minor"
-  echo "   ./compilaApk.sh major    - Compilar com versão major"
-  echo "   ./compartilha.sh         - Compartilhar APK via servidor HTTP"
+  echo "   ./compila.sh             - Compilar APK (incrementa versionCode)"
+  echo "   ./compila.sh patch       - Compilar com versao patch"
+  echo "   ./compila.sh minor       - Compilar com versao minor"
+  echo "   ./compila.sh major       - Compilar com versao major"
+  echo "   ./share.sh               - Compartilhar APK via servidor HTTP"
   echo ""
 }
 

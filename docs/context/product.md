@@ -1,35 +1,50 @@
-# Product Context
+# Contexto de Produto
 
-> "Measure twice, code once."
+> "Medir duas vezes, cortar uma vez."
 
-## Vision
-The **Controle Patrimonial** app is a "Digital Clipboard" designed to replace manual paper spreadsheets for inventory management at IFSUL. It prioritizes **speed**, **offline reliability**, and **error minimization** during field work.
+## Visao
+O app **Controle Patrimonial** funciona como uma "prancheta digital" para substituir planilhas impressas no inventario patrimonial do IFSUL. Os pilares sao **agilidade**, **confiabilidade offline** e **reducao de erros** no trabalho de campo.
 
-## Core Value Proposition
-1.  **Speed**: Batch scanning allows checking hundreds of items quickly.
-2.  **Reliability**: Works 100% offline. Syncs only when the user explicitly actions it.
-3.  **Precision**: Focuses on identifying *differences* (inconsistencies) rather than just listing assets.
+## Estado Atual do Produto (Abril/2026)
+1. O fluxo principal em producao e **planilha + operacao offline**.
+2. O backend existe como infraestrutura de suporte, mas **ainda nao e obrigatorio** no fluxo MVP de campo.
+3. O produto esta migrando para um modelo hibrido com:
+   - sincronizacao seletiva com backend
+   - suporte a fotos de itens e futura sincronizacao de imagens
+4. Durante essa transicao, pode haver coexistencia temporaria de partes offline-first e partes sync-ready.
 
-## User Persona
-*   **Role**: Servidor do IFSUL (Patrimony/Inventory Staff).
-*   **Context**: Walking through classrooms, labs, and offices. Potentially weak or no Wi-Fi.
-*   **Pain Points**:
-    *   Paper lists are outdated the moment they are printed.
-    *   Manual data entry back into SUAP is error-prone.
-    *   Hard to visually check if an item belongs to the current room.
+## Proposta de Valor
+1. **Velocidade**: escaneamento em lote para conferir muitos itens rapidamente.
+2. **Confiabilidade**: operacao offline durante a conferencia, com sincronizacao apenas quando fizer sentido.
+3. **Precisao**: foco em identificar inconsistencias e diferencas reais, nao apenas listar patrimonio.
 
-## Key Features
-1.  **Offline-First**: Download full DB -> Work Offline -> Upload Differences.
-2.  **Smart Scanning**:
-    *   **Individual**: Detailed check/edit of a single item.
-    *   **Batch**: Rapid fire scanning to validate presence in a room.
-3.  **Inconsistency Highlighting**:
-    *   Alerts if an item is scanning in "Room A" but registered in "Room B".
-    *   Alerts if an item is not found in the local DB.
-4.  **Delta Sync**: The system captures *modifications* (`original` vs `current`) to generate a precise change report.
+## Persona
+- **Papel**: Servidor(a) do IFSUL responsavel por patrimonio/inventario.
+- **Contexto**: deslocamento entre salas, laboratorios e setores, com conectividade instavel.
+- **Dores**:
+  - planilhas impressas ficam desatualizadas rapidamente
+  - digitacao manual posterior no SUAP e propensa a erro
+  - dificuldade de verificar visualmente se o item pertence ao local atual
 
-## Domain Language (Ubiquitous Language)
-*   **Patrimônio**: An asset with a unique barcode (number), description, state, and location.
-*   **Sessão de Escaneamento**: A period of work (e.g., "Scanning Lab 3").
-*   **Inconsistência**: A mismatch between physical reality and the database (e.g., Wrong Room).
-*   **Sincronização**: The act of pulling the latest DB snapshot or pushing queued changes.
+## Funcionalidades-Chave
+1. **Offline-First (prioridade atual)**: importar planilha do SUAP -> trabalhar offline -> exportar alteracoes.
+2. **Escaneamento inteligente**:
+   - **Individual**: validacao e edicao detalhada de um item.
+   - **Em lote**: leitura continua para validacao rapida por ambiente.
+3. **Destaque de inconsistencias**:
+   - alerta quando item escaneado diverge da sala esperada/cadastrada
+   - alerta quando item nao existe na base local
+4. **Rastreamento de alteracoes (delta)**:
+   - captura `original` vs `atual`
+   - permite gerar relatorio objetivo para atualizacao no SUAP
+
+## Evolucao Planejada (Curto Prazo)
+1. Introduzir sincronizacao assistida pelo backend sem quebrar o fluxo offline atual.
+2. Implementar armazenamento de fotos por item e definir politica de sincronizacao quando online.
+3. Manter importacao/exportacao por planilha como fallback seguro durante a migracao.
+
+## Linguagem de Dominio
+- **Patrimonio**: item com numero unico (codigo de barras), descricao, situacao e localizacao.
+- **Sessao de escaneamento**: periodo de trabalho em um ambiente (ex.: laboratorio/sala).
+- **Inconsistencia**: divergencia entre realidade fisica e base de dados.
+- **Sincronizacao**: envio/recebimento de dados com backend conforme politica do fluxo.

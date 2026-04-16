@@ -31,10 +31,6 @@ log_warning() {
     echo "[WARNING] $(date '+%Y-%m-%d %H:%M:%S') - $1"
 }
 
-log_warning() {
-    echo "[WARNING] $(date '+%Y-%m-%d %H:%M:%S') - $1"
-}
-
 # ============================================
 # Funções de Verificação
 # ============================================
@@ -176,8 +172,9 @@ show_usage() {
     echo "     docker-compose exec flutter bash  (alternativa)"
     echo ""
     echo "  📱 Desenvolvimento:"
-    echo "     ./compilaApk.sh [patch|minor|major]  - Compilar APK"
-    echo "     (execute dentro do container ou use: docker-compose exec flutter ./compilaApk.sh)"
+    echo "     ./compila.sh [patch|minor|major]  - Compilar APK"
+    echo "     ./share.sh                        - Compartilhar APK via HTTP temporario"
+    echo "     (scripts opcionais; fluxo principal atual usa compila.sh + share.sh)"
     echo ""
     log_info "=========================================="
 }

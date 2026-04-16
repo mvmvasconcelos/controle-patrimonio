@@ -6,6 +6,8 @@ O Sistema de Controle Patrimonial é uma ferramenta focada na **eficiência do t
 
 O app funcionará como uma "prancheta digital", permitindo ao usuário escanear itens de forma individual ou em lote, identificar rapidamente inconsistências de localização, editar informações e registrar novos itens não catalogados. A funcionalidade mais importante é a geração de um relatório final, em formato de planilha, que consolida **apenas os itens que sofreram alterações**, destacando as células modificadas para facilitar e agilizar a etapa de atualização manual no SUAP.
 
+No estado atual do projeto, o fluxo **offline por planilha** permanece como prioridade operacional. O backend segue como suporte e evolucao para sincronizacao progressiva (incluindo fotos de itens), sem quebrar o fluxo offline durante a transicao.
+
 ---
 
 ## Etapas do Desenvolvimento
@@ -43,10 +45,10 @@ O app funcionará como uma "prancheta digital", permitindo ao usuário escanear 
 
 **Objetivo:** Integrar e configurar o scanner de código de barras com feedback adequado.
 
--   [ ] **3.1. Integração do Scanner**
+-   [x] **3.1. Integração do Scanner**
     -   [x] **3.1.1.** Integrar e adaptar o scanner de código de barras (`barcode-scanner`)
 
--   [ ] **3.2. Feedback Sonoro e Háptico**
+-   [x] **3.2. Feedback Sonoro e Háptico**
     -   [x] **3.2.1.** Implementar feedback para sucesso (item novo escaneado)
     -   [x] **3.2.2.** Implementar feedback para duplicado (item já escaneado na sessão atual)
     -   [x] **3.2.3.** Implementar feedback para não encontrado / erro
