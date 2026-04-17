@@ -1,7 +1,9 @@
 """
 Modelos SQLAlchemy para o banco de dados
 """
-from sqlalchemy import Column, Integer, String, DateTime, Index
+from datetime import datetime
+
+from sqlalchemy import Column, Integer, String, DateTime, Index, LargeBinary
 from sqlalchemy.sql import func
 from .database import Base
 
@@ -31,3 +33,22 @@ class Patrimonio(Base):
 
     def __repr__(self):
         return f"<Patrimonio(numero={self.numero_patrimonio}, descricao={self.descricao})>"
+
+
+class FotoPatrimonio(Base):
+    """Fotos associadas a um patrimônio."""
+
+    __tablename__ = "fotos_patrimonio"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    numero_patrimonio = Column(String, index=True, nullable=False)
+    imagem_blob = Column(LargeBinary, nullable=False)
+    data_modificacao = Column(
+        DateTime(timezone=True),
+        default=datetime.utcnow,
+        nullable=False,
+    )
+    sync_origin = Column(String, default="app", nullable=False)
+
+    def __repr__(self):
+        return f"<FotoPatrimonio(id={self.id}, numero={self.numero_patrimonio})>"

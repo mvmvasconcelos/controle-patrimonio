@@ -1,5 +1,6 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/patrimonio.dart';
+import 'photo_database.dart';
 
 class HiveDatabase {
   static const String patrimonioBoxName = 'patrimonio_box';
@@ -18,26 +19,7 @@ class HiveDatabase {
     await Hive.openBox(settingsBoxName);
     await Hive.openBox<Map>(rawDataBoxName);
 
-    // Seed de desenvolvimento: garantir que exista um patrimônio mock
-    // válido para testes (número 253170). Não sobrescreve se já existir.
-    final box = patrimonioBox;
-    final exists = box.values.cast<Patrimonio?>().any(
-      (p) => p != null && p.numeroPatrimonio == '253170',
-    );
-
-    if (!exists) {
-      final mock = Patrimonio(
-        id: null,
-        numeroPatrimonio: '253170',
-        descricao: 'Mockup válido para testes',
-        sala: 'Sala de Teste',
-        responsavel: 'Automated Mock',
-        situacao: 'Ativo',
-        observacoes: 'Inserido automaticamente para testes locais',
-      );
-
-      await box.add(mock);
-    }
+    // Não inserir registros mock automaticamente para evitar ruído no inventário.
   }
 
   // Box para armazenar os dados do patrimônio
@@ -160,5 +142,7 @@ class HiveDatabase {
   static Future<void> clearAllData() async {
     await patrimonioBox.clear();
     await settingsBox.clear();
+    await rawDataBox.clear();
+    await PhotoDatabase.clearAllData();
   }
 }

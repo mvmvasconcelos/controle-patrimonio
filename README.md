@@ -1,5 +1,7 @@
 # Controle de Patrimônio IFSul Câmpus Venâncio Aires
 
+[![Status](https://img.shields.io/badge/Status-em%20Desenvolvimento-purple)](https://github.com/mvmvasconcelos/) [![Versão](https://img.shields.io/badge/version-1.0.3-blue.svg)](https://github.com/ifsul/leitor-etiquetas-patrimonio) [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev/) [![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green.svg)](https://opensource.org/licenses/MIT) [![Platform](https://img.shields.io/badge/platform-Android-brightgreen.svg)](https://www.android.com/) [![Docker](https://img.shields.io/badge/Docker-Suportado-2496ED?logo=docker)](https://www.docker.com/) [![IFSul](https://img.shields.io/badge/IFSul-Ven%C3%A2ncio%20Aires-195128)](https://www.venancio.ifsul.edu.br)
+
 Aplicativo Android desenvolvido em Flutter para apoio às conferências de inventário patrimonial. Funciona como uma **"planilha de apoio" automatizada**: o usuário importa a planilha exportada do SUAP, realiza o trabalho de campo escaneando os itens, e exporta de volta apenas o que foi alterado — pronto para atualização no SUAP.
 
 ---
@@ -28,13 +30,15 @@ Aplicativo Android desenvolvido em Flutter para apoio às conferências de inven
 | Exportação completa | Planilha completa + coluna `ATUALIZADO_EM` |
 | Relatório de modificações | Tela dedicada, geração de `.xlsx` com destaque |
 | Funcionamento offline | Banco de dados local via Hive |
+| Fotos por item | Até 3 fotos por patrimônio, com câmera/galeria e visualização em grade |
+| Sync de fotos (assistido) | Upload/download/delete com fila de pendências offline |
 | Auto-atualização | Verifica e baixa nova versão do APK |
 
 ---
 
 ## Infraestrutura
 
-- **App**: Flutter 3.x (Android), Hive (DB local), `mobile_scanner`, `excel`, `spreadsheet_decoder`, `csv`, `file_picker`
+- **App**: Flutter 3.x (Android), Hive + SQLite local (`sqflite`), `mobile_scanner`, `excel`, `spreadsheet_decoder`, `csv`, `file_picker`, `image_picker`, `flutter_image_compress`, `photo_view`
 - **Backend** (suporte): FastAPI + SQLite em `128.1.1.49:6090` — usado para sincronização opcional, não é requisito para o funcionamento principal
 - **Build**: Docker (`controle-patrimonio-flutter`)
 

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../database/photo_database.dart';
+import '../screens/item_detail_page.dart';
 import '../models/patrimonio.dart';
 import '../providers/patrimonio_provider.dart';
-import '../widgets/scanned_item_modal.dart';
 
 class InventoryListPage extends StatefulWidget {
   final bool initialOnlyModified;
@@ -18,11 +19,13 @@ class _InventoryListPageState extends State<InventoryListPage> {
   String _query = '';
   String? _filterSala;
   bool _onlyModified = false;
+  Set<String> _numbersWithPhotos = const {};
 
   @override
   void initState() {
     super.initState();
     _onlyModified = widget.initialOnlyModified;
+    _loadNumbersWithPhotos();
   }
 
   @override
@@ -119,31 +122,24 @@ class _InventoryListPageState extends State<InventoryListPage> {
     );
   }
 
-  void _editItem(BuildContext context, Patrimonio patrimonio) {
-    final provider = context.read<PatrimonioProvider>();
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => ScannedItemModal(
-        patrimonio: patrimonio,
-        selectedSala: null,
-        onSave: (updated) {
-          final changes = <String, dynamic>{};
-          if (patrimonio.descricao != updated.descricao)
-            changes['descricao'] = updated.descricao;
-          if (patrimonio.sala != updated.sala) changes['sala'] = updated.sala;
-          if (patrimonio.responsavel != updated.responsavel)
-            changes['responsavel'] = updated.responsavel;
-          if (patrimonio.situacao != updated.situacao)
-            changes['situacao'] = updated.situacao;
-          if (patrimonio.observacoes != updated.observacoes)
-            changes['observacoes'] = updated.observacoes;
-          if (changes.isNotEmpty)
-            provider.updatePatrimonio(patrimonio, changes);
-        },
+  Future<void> _loadNumbersWithPhotos() async {
+    final numbers = await PhotoDatabase.getAllNumbersWithPhotos();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _numbersWithPhotos = numbers;
+    });
+  }
+
+  Future<void> _openDetail(BuildContext context, Patrimonio patrimonio) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ItemDetailPage(patrimonio: patrimonio),
       ),
     );
+    await _loadNumbersWithPhotos();
   }
 
   @override
@@ -270,7 +266,8 @@ class _InventoryListPageState extends State<InventoryListPage> {
                           final p = filtered[index];
                           return _ItemTile(
                             patrimonio: p,
-                            onTap: () => _editItem(context, p),
+                            hasPhoto: _numbersWithPhotos.contains(p.numeroPatrimonio),
+                            onTap: () => _openDetail(context, p),
                           );
                         },
                       ),
@@ -285,9 +282,14 @@ class _InventoryListPageState extends State<InventoryListPage> {
 
 class _ItemTile extends StatelessWidget {
   final Patrimonio patrimonio;
+  final bool hasPhoto;
   final VoidCallback? onTap;
 
-  const _ItemTile({required this.patrimonio, this.onTap});
+  const _ItemTile({
+    required this.patrimonio,
+    required this.hasPhoto,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -335,15 +337,23 @@ class _ItemTile extends StatelessWidget {
         ],
       ),
       isThreeLine: modifiedFields.isNotEmpty,
-      trailing: Text(
-        p.situacao,
-        style: TextStyle(
-          fontSize: 11,
-          color: p.situacao.toLowerCase() == 'bom' ||
-                  p.situacao.toLowerCase() == 'ativo'
-              ? Colors.green
-              : Colors.grey,
-        ),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (hasPhoto)
+            const Icon(Icons.photo_camera, color: Colors.blue, size: 18),
+          Text(
+            p.situacao,
+            style: TextStyle(
+              fontSize: 11,
+              color: p.situacao.toLowerCase() == 'bom' ||
+                      p.situacao.toLowerCase() == 'ativo'
+                  ? Colors.green
+                  : Colors.grey,
+            ),
+          ),
+        ],
       ),
     );
   }

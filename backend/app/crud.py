@@ -90,3 +90,74 @@ def delete_patrimonio(db: Session, numero_patrimonio: str) -> bool:
         db.commit()
         return True
     return False
+
+
+def get_fotos_by_numero(
+    db: Session,
+    numero_patrimonio: str,
+) -> List[models.FotoPatrimonio]:
+    """Listar fotos de um patrimônio."""
+    return (
+        db.query(models.FotoPatrimonio)
+        .filter(models.FotoPatrimonio.numero_patrimonio == numero_patrimonio)
+        .order_by(models.FotoPatrimonio.data_modificacao.desc(), models.FotoPatrimonio.id.desc())
+        .all()
+    )
+
+
+def get_foto_by_id(
+    db: Session,
+    numero_patrimonio: str,
+    foto_id: int,
+) -> Optional[models.FotoPatrimonio]:
+    """Buscar foto específica de um patrimônio."""
+    return (
+        db.query(models.FotoPatrimonio)
+        .filter(
+            models.FotoPatrimonio.numero_patrimonio == numero_patrimonio,
+            models.FotoPatrimonio.id == foto_id,
+        )
+        .first()
+    )
+
+
+def create_foto_patrimonio(
+    db: Session,
+    numero_patrimonio: str,
+    image_bytes: bytes,
+    sync_origin: str = "app",
+) -> models.FotoPatrimonio:
+    """Criar nova foto para um patrimônio."""
+    total = (
+        db.query(func.count(models.FotoPatrimonio.id))
+        .filter(models.FotoPatrimonio.numero_patrimonio == numero_patrimonio)
+        .scalar()
+    )
+
+    if (total or 0) >= 3:
+        raise ValueError("Limite de 3 fotos por patrimônio atingido")
+
+    db_photo = models.FotoPatrimonio(
+        numero_patrimonio=numero_patrimonio,
+        imagem_blob=image_bytes,
+        sync_origin=sync_origin,
+    )
+    db.add(db_photo)
+    db.commit()
+    db.refresh(db_photo)
+    return db_photo
+
+
+def delete_foto_patrimonio(
+    db: Session,
+    numero_patrimonio: str,
+    foto_id: int,
+) -> bool:
+    """Remover foto de um patrimônio."""
+    db_photo = get_foto_by_id(db, numero_patrimonio, foto_id)
+    if not db_photo:
+        return False
+
+    db.delete(db_photo)
+    db.commit()
+    return True

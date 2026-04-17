@@ -158,16 +158,19 @@ No estado atual do projeto, o fluxo **offline por planilha** permanece como prio
 
 **Objetivo:** Permitir registro fotográfico dos itens patrimoniais.
 
--   [ ] **10.1. Interface no App**
-    -   [ ] **10.1.1.** Implementar botão no modal para `tirar foto / escolher da galeria`
+**Status de fechamento:** Concluída e validada em campo (17/04/2026).  
+**Documento de referência:** `docs/implementacao_fotos.md`.
 
--   [ ] **10.2. Armazenamento no Servidor**
-    -   [ ] **10.2.1.** Criar endpoint no FastAPI para receber upload da imagem
-    -   [ ] **10.2.2.** Salvar imagem em uma pasta no servidor local, associando seu caminho ao item de patrimônio
+-   [x] **10.1. Interface no App**
+    -   [x] **10.1.1.** Implementar botão no modal para `tirar foto / escolher da galeria`
 
--   [ ] **10.3. Visualização**
-    -   [ ] **10.3.1.** Exibir foto do item no modal, buscando-a do servidor quando online
-    -   [ ] **10.3.2.** Implementar cache de imagens no app para visualização offline
+-   [x] **10.2. Armazenamento no Servidor**
+    -   [x] **10.2.1.** Criar endpoint no FastAPI para receber upload da imagem
+    -   [x] **10.2.2.** Persistir foto associada ao item no backend (modelo `fotos_patrimonio`)
+
+-   [x] **10.3. Visualização**
+    -   [x] **10.3.1.** Exibir foto do item no modal e na visualização de detalhe
+    -   [x] **10.3.2.** Implementar cache/armazenamento local de imagens para visualização offline
 
 ---
 

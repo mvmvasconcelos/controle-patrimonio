@@ -8,9 +8,9 @@ O app **Controle Patrimonial** funciona como uma "prancheta digital" para substi
 ## Estado Atual do Produto (Abril/2026)
 1. O fluxo principal em producao e **planilha + operacao offline**.
 2. O backend existe como infraestrutura de suporte, mas **ainda nao e obrigatorio** no fluxo MVP de campo.
-3. O produto esta migrando para um modelo hibrido com:
+3. O produto opera em modelo hibrido com:
    - sincronizacao seletiva com backend
-   - suporte a fotos de itens e futura sincronizacao de imagens
+   - suporte a fotos de itens com sincronizacao quando o servidor estiver disponivel
 4. Durante essa transicao, pode haver coexistencia temporaria de partes offline-first e partes sync-ready.
 
 ## Proposta de Valor
@@ -40,7 +40,7 @@ O app **Controle Patrimonial** funciona como uma "prancheta digital" para substi
 
 ## Evolucao Planejada (Curto Prazo)
 1. Introduzir sincronizacao assistida pelo backend sem quebrar o fluxo offline atual.
-2. Implementar armazenamento de fotos por item e definir politica de sincronizacao quando online.
+2. Consolidar a experiencia de fotos por item (sincronizacao, recuperacao e manutencao de orfas) com testes de campo.
 3. Manter importacao/exportacao por planilha como fallback seguro durante a migracao.
 
 ## Linguagem de Dominio

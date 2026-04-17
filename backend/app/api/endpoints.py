@@ -1,7 +1,7 @@
 """
 Endpoints da API REST
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy.orm import Session
 from typing import Optional
 from .. import crud, schemas
@@ -116,3 +116,70 @@ def create_patrimonio(
         )
     
     return crud.create_patrimonio(db=db, patrimonio=patrimonio)
+
+
+@router.post(
+    "/patrimonio/{numero_patrimonio}/fotos",
+    response_model=schemas.FotoPatrimonioMetadata,
+    status_code=201,
+)
+async def upload_foto_patrimonio(
+    numero_patrimonio: str,
+    foto: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Enviar foto para um patrimônio."""
+    image_bytes = await foto.read()
+    if not image_bytes:
+        raise HTTPException(status_code=400, detail="Arquivo de foto vazio")
+
+    try:
+        return crud.create_foto_patrimonio(
+            db=db,
+            numero_patrimonio=numero_patrimonio,
+            image_bytes=image_bytes,
+            sync_origin="app",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get(
+    "/patrimonio/{numero_patrimonio}/fotos",
+    response_model=schemas.FotoPatrimonioListResponse,
+)
+def list_fotos_patrimonio(
+    numero_patrimonio: str,
+    db: Session = Depends(get_db),
+):
+    """Listar metadados das fotos de um patrimônio."""
+    items = crud.get_fotos_by_numero(db, numero_patrimonio)
+    return schemas.FotoPatrimonioListResponse(total=len(items), items=items)
+
+
+@router.get("/patrimonio/{numero_patrimonio}/fotos/{foto_id}")
+def download_foto_patrimonio(
+    numero_patrimonio: str,
+    foto_id: int,
+    db: Session = Depends(get_db),
+):
+    """Baixar bytes da foto de um patrimônio."""
+    foto = crud.get_foto_by_id(db, numero_patrimonio, foto_id)
+    if not foto:
+        raise HTTPException(status_code=404, detail="Foto não encontrada")
+
+    return Response(content=foto.imagem_blob, media_type="image/jpeg")
+
+
+@router.delete(
+    "/patrimonio/{numero_patrimonio}/fotos/{foto_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+def delete_foto_patrimonio(
+    numero_patrimonio: str,
+    foto_id: int,
+    db: Session = Depends(get_db),
+):
+    """Remover foto do servidor de forma idempotente."""
+    crud.delete_foto_patrimonio(db, numero_patrimonio, foto_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

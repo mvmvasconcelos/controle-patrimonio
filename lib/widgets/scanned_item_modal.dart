@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/patrimonio.dart';
+import 'photo_grid_widget.dart';
 
 class ScannedItemModal extends StatefulWidget {
   final Patrimonio patrimonio;
@@ -173,6 +174,12 @@ class _ScannedItemModalState extends State<ScannedItemModal> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  PhotoGridWidget(
+                    numeroPatrimonio: widget.patrimonio.numeroPatrimonio,
+                    readOnly: false,
                   ),
                   const SizedBox(height: 16),
 

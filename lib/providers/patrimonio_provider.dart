@@ -18,7 +18,10 @@ class PatrimonioProvider with ChangeNotifier {
   bool get hasData => _patrimonios.isNotEmpty;
 
   // Configurações do backend
-  static const String baseUrl = 'http://128.1.1.49:6090';
+  static const List<String> _baseUrlCandidates = [
+    'http://128.1.1.49:6090',
+    'https://ifva.duckdns.org',
+  ];
 
   // Carregar dados do Hive na inicialização
   Future<void> loadLocalData() async {
@@ -39,7 +42,9 @@ class PatrimonioProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(Uri.parse('$baseUrl/api/v1/patrimonio'));
+      final response = await _requestWithFallback(
+        (baseUrl) => http.get(Uri.parse('$baseUrl/api/v1/patrimonio')),
+      );
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> body = json.decode(response.body);
@@ -163,21 +168,34 @@ class PatrimonioProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      final updates = modifiedPatrimonios.map((p) => {
-        'numero_patrimonio': p.numeroPatrimonio,
-        'sala': p.sala,
-        'responsavel': p.responsavel,
-        'situacao': p.situacao,
-        'observacoes': p.observacoes,
-      }).toList();
+      var allOk = true;
+      for (final p in modifiedPatrimonios) {
+        final payload = {
+          'numero_patrimonio': p.numeroPatrimonio,
+          'updates': {
+            'sala': p.sala,
+            'responsavel': p.responsavel,
+            'situacao': p.situacao,
+            'observacoes': p.observacoes,
+            'descricao': p.descricao,
+          },
+        };
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/patrimonio/update'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(updates),
-      );
+        final response = await _requestWithFallback(
+          (baseUrl) => http.post(
+            Uri.parse('$baseUrl/api/v1/patrimonio/update'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(payload),
+          ),
+        );
 
-      if (response.statusCode == 200) {
+        if (response.statusCode != 200) {
+          allOk = false;
+          break;
+        }
+      }
+
+      if (allOk) {
         // Marcar como não modificados após envio bem-sucedido
         for (final patrimonio in modifiedPatrimonios) {
           final updated = patrimonio.copyWith(
@@ -192,7 +210,7 @@ class PatrimonioProvider with ChangeNotifier {
         // Recarregar dados
         await loadLocalData();
       } else {
-        throw Exception('Erro ao enviar atualizações: ${response.statusCode}');
+        throw Exception('Erro ao enviar atualizações para o servidor');
       }
     } catch (e) {
       _error = 'Erro ao enviar atualizações: $e';
@@ -201,6 +219,24 @@ class PatrimonioProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<http.Response> _requestWithFallback(
+    Future<http.Response> Function(String baseUrl) call,
+  ) async {
+    Object? lastError;
+    for (final baseUrl in _baseUrlCandidates) {
+      try {
+        final response = await call(baseUrl);
+        if (response.statusCode < 500) {
+          return response;
+        }
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    throw Exception('Servidor indisponível: ${lastError ?? 'sem resposta'}');
   }
 
   // Limpar erro

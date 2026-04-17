@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'database/hive_database.dart';
+import 'database/photo_database.dart';
 import 'providers/patrimonio_provider.dart';
 import 'providers/update_provider.dart';
+import 'services/photo_sync_service.dart';
 import 'screens/home_page.dart';
 import 'screens/about_page.dart';
 import 'screens/report_page.dart';
@@ -15,6 +17,7 @@ void main() async {
 
   // Inicializar Hive
   await HiveDatabase.init();
+  await PhotoDatabase.init();
 
   runApp(const MyApp());
 }
@@ -35,7 +38,7 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
-        home: const HomePage(),
+        home: const _StartupSyncWrapper(child: HomePage()),
         routes: {
           '/about': (context) => const AboutPage(),
           '/report': (context) => const ReportPage(),
@@ -45,5 +48,39 @@ class MyApp extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+class _StartupSyncWrapper extends StatefulWidget {
+  final Widget child;
+
+  const _StartupSyncWrapper({required this.child});
+
+  @override
+  State<_StartupSyncWrapper> createState() => _StartupSyncWrapperState();
+}
+
+class _StartupSyncWrapperState extends State<_StartupSyncWrapper> {
+  bool _syncStarted = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_syncStarted) {
+      return;
+    }
+
+    _syncStarted = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      PhotoSyncService.syncAll(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.child;
   }
 }

@@ -3,7 +3,7 @@
 ## Visao de Arquitetura
 O sistema esta em **transicao para arquitetura hibrida**:
 1. **Prioridade atual**: fluxo offline no app (importar planilha, editar, exportar alteracoes).
-2. **Em evolucao**: sincronizacao assistida por backend e suporte a fotos.
+2. **Ja implementado no ciclo atual**: sincronizacao assistida por backend e suporte a fotos por item.
 
 Na pratica, o app precisa continuar funcional offline enquanto as capacidades de sincronizacao sao introduzidas gradualmente.
 
@@ -11,6 +11,7 @@ Na pratica, o app precisa continuar funcional offline enquanto as capacidades de
 - **Framework**: Flutter (Dart).
 - **Gerenciamento de estado**: `Provider`.
 - **Base local**: `Hive` (NoSQL chave-valor, rapido para leitura).
+- **Base local de fotos**: `sqflite` (SQLite) com BLOB e fila de pendencias de sincronizacao.
 - **Padrao de camadas**:
     - **Screens**: componentes de interface.
     - **Providers**: estado e regras de negocio.
@@ -23,7 +24,7 @@ Na pratica, o app precisa continuar funcional offline enquanto as capacidades de
 - **Papel no projeto**:
     - oferecer endpoints de suporte para sincronizacao
     - receber e persistir alteracoes quando o fluxo de sync estiver habilitado
-    - evoluir para sincronizacao de fotos/imagens por item
+    - manter endpoints de fotos por item (upload/listagem/download/remocao)
     - apoiar distribuicao de artefatos quando aplicavel
 
 ### Infraestrutura

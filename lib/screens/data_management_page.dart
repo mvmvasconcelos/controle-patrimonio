@@ -3,9 +3,12 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../database/hive_database.dart';
+import '../database/photo_database.dart';
+import '../models/patrimonio.dart';
 import '../providers/patrimonio_provider.dart';
 import '../services/export_service.dart';
 import '../services/import_service.dart';
+import '../services/photo_sync_service.dart';
 
 class DataManagementPage extends StatefulWidget {
   const DataManagementPage({super.key});
@@ -17,6 +20,8 @@ class DataManagementPage extends StatefulWidget {
 class _DataManagementPageState extends State<DataManagementPage> {
   bool _isImporting = false;
   bool _isExporting = false;
+  bool _isRestoringPhotos = false;
+  bool _isCleaningOrphans = false;
   String _exportFormat = 'xlsx';
 
   // ── Importação ──────────────────────────────────────────
@@ -54,6 +59,10 @@ class _DataManagementPageState extends State<DataManagementPage> {
       );
 
       await provider.loadLocalData();
+      if (mounted) {
+        await PhotoSyncService.syncAll(context);
+        await _offerOrphanPhotoCleanup(provider.patrimonios);
+      }
 
       if (!mounted) return;
       final navigator = Navigator.of(context);
@@ -161,6 +170,177 @@ class _DataManagementPageState extends State<DataManagementPage> {
     );
   }
 
+  Future<void> _restoreMissingPhotosFromServer() async {
+    final provider = context.read<PatrimonioProvider>();
+    final allNumbers = _extractCurrentNumbers(provider.patrimonios);
+    if (allNumbers.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não há itens carregados para restaurar fotos.')),
+        );
+      }
+      return;
+    }
+
+    setState(() => _isRestoringPhotos = true);
+    try {
+      final before = await PhotoDatabase.getAllNumbersWithPhotos();
+      final missing = allNumbers.difference(before).toList(growable: false);
+      if (missing.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Todos os itens já possuem fotos locais.')),
+          );
+        }
+        return;
+      }
+
+      await PhotoSyncService.downloadPhotos(missing);
+      final after = await PhotoDatabase.getAllNumbersWithPhotos();
+      final restoredCount = after.difference(before).intersection(allNumbers).length;
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              restoredCount > 0
+                  ? 'Fotos restauradas para $restoredCount item(ns).'
+                  : 'Nenhuma foto nova foi encontrada no servidor.',
+            ),
+            backgroundColor: restoredCount > 0 ? Colors.green : null,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError('Erro ao restaurar fotos: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isRestoringPhotos = false);
+      }
+    }
+  }
+
+  Future<void> _cleanOrphanPhotosManually() async {
+    final provider = context.read<PatrimonioProvider>();
+    final currentNumbers = _extractCurrentNumbers(provider.patrimonios);
+    final orphans = await PhotoDatabase.getOrphanNumbers(currentNumbers);
+
+    if (orphans.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nenhuma foto órfã encontrada.')),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Limpar fotos órfãs?'),
+        content: Text(
+          'Foram encontradas fotos de ${orphans.length} item(ns) que não existem na planilha atual. Deseja remover agora?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Manter'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Remover', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete != true) {
+      return;
+    }
+
+    setState(() => _isCleaningOrphans = true);
+    try {
+      final removed = await PhotoDatabase.deletePhotosByNumbers(orphans);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Limpeza concluída: $removed foto(s) órfã(s) removida(s).'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError('Erro ao limpar fotos órfãs: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isCleaningOrphans = false);
+      }
+    }
+  }
+
+  Future<void> _offerOrphanPhotoCleanup(List<Patrimonio> patrimonios) async {
+    final currentNumbers = _extractCurrentNumbers(patrimonios);
+    final orphans = await PhotoDatabase.getOrphanNumbers(currentNumbers);
+    if (orphans.isEmpty || !mounted) {
+      return;
+    }
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Fotos órfãs encontradas'),
+        content: Text(
+          'Após a importação, foram detectadas fotos de ${orphans.length} item(ns) que não existem na nova planilha. Deseja limpar essas fotos agora?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Manter por enquanto'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Limpar agora', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      await PhotoDatabase.deletePhotosByNumbers(orphans);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Fotos órfãs removidas com sucesso.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('As fotos órfãs foram mantidas e podem ser limpas depois manualmente.'),
+        ),
+      );
+    }
+  }
+
+  Set<String> _extractCurrentNumbers(List<Patrimonio> patrimonios) {
+    return patrimonios
+        .map((p) => p.numeroPatrimonio.trim())
+        .where((n) => n.isNotEmpty)
+        .toSet();
+  }
+
   // ── Build ───────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
@@ -196,6 +376,67 @@ class _DataManagementPageState extends State<DataManagementPage> {
                   ),
                 ),
               ],
+
+              const SizedBox(height: 20),
+
+              const Divider(),
+              const _SectionHeader(
+                icon: Icons.photo_library,
+                label: 'Fotos e Sincronização',
+                color: Colors.deepPurple,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Use estas ações para restaurar fotos sincronizadas e manter o banco local sem registros órfãos.',
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: _isImporting || _isRestoringPhotos || totalItems == 0
+                    ? null
+                    : _restoreMissingPhotosFromServer,
+                icon: _isRestoringPhotos
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Icon(Icons.cloud_download),
+                label: Text(
+                  _isRestoringPhotos
+                      ? 'Restaurando fotos...'
+                      : 'Restaurar fotos sincronizadas',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(48),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _isCleaningOrphans || _isImporting
+                    ? null
+                    : _cleanOrphanPhotosManually,
+                icon: _isCleaningOrphans
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.cleaning_services),
+                label: Text(
+                  _isCleaningOrphans
+                      ? 'Limpando órfãs...'
+                      : 'Limpar fotos órfãs',
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(46),
+                ),
+              ),
 
               const SizedBox(height: 20),
 

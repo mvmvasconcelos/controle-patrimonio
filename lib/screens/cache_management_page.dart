@@ -22,10 +22,10 @@ class _CacheManagementPageState extends State<CacheManagementPage> {
     showDialog(
       context: context,
       builder: (BuildContext ctx) => AlertDialog(
-        title: const Text('Resetar Modificacoes?'),
+        title: const Text('Resetar modificações?'),
         content: Text(
-          'Isso descartara todas as alteracoes feitas em $modifiedCount item(ns) e os restaurara para o estado anterior.\n\n'
-          'Esta acao pode ser desfeita sincronizando com o servidor novamente.',
+          'Isso descartará todas as alterações feitas em $modifiedCount item(ns) e os restaurará para o estado anterior.\n\n'
+          'Esta ação pode ser desfeita sincronizando com o servidor novamente.',
         ),
         actions: [
           TextButton(
@@ -43,7 +43,7 @@ class _CacheManagementPageState extends State<CacheManagementPage> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Modificacoes resetadas com sucesso'),
+                      content: Text('Modificações resetadas com sucesso'),
                       backgroundColor: Colors.green,
                       duration: Duration(seconds: 2),
                     ),
@@ -51,7 +51,7 @@ class _CacheManagementPageState extends State<CacheManagementPage> {
                 }
               } catch (e) {
                 if (mounted) {
-                  _showError('Erro ao resetar modificacoes: $e');
+                  _showError('Erro ao resetar modificações: $e');
                 }
               } finally {
                 if (mounted) setState(() => _isProcessing = false);
@@ -73,11 +73,13 @@ class _CacheManagementPageState extends State<CacheManagementPage> {
       builder: (BuildContext ctx) => AlertDialog(
         title: const Text('Limpar tudo?'),
         content: const Text(
-          'Isso removera TODOS os dados armazenados localmente, incluindo:\n\n'
+          'Isso removerá TODOS os dados armazenados localmente, incluindo:\n\n'
           '- Todos os itens importados\n'
-          '- Todas as modificacoes\n'
-          '- Historico de sincronizacao\n\n'
-          'Esta acao NAO pode ser desfeita. Para recuperar os dados, voce precisara importar a planilha novamente.',
+          '- Todas as fotos armazenadas localmente\n'
+          '- Todas as modificações\n'
+          '- Histórico de sincronização\n\n'
+          'Fotos ainda não sincronizadas serão perdidas definitivamente. Fotos já enviadas ao servidor poderão ser restauradas depois.\n\n'
+          'Esta ação NÃO pode ser desfeita. Para recuperar os dados, você precisará importar a planilha novamente.',
         ),
         actions: [
           TextButton(
@@ -159,7 +161,7 @@ class _CacheManagementPageState extends State<CacheManagementPage> {
               ),
               const SizedBox(height: 20),
               const Text(
-                'Acoes de risco',
+                'Ações de risco',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -168,7 +170,7 @@ class _CacheManagementPageState extends State<CacheManagementPage> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Estas operacoes removem alteracoes locais e devem ser usadas com cuidado.',
+                'Estas operações removem alterações locais e devem ser usadas com cuidado.',
                 style: TextStyle(color: Colors.grey, fontSize: 13),
               ),
               const SizedBox(height: 12),
@@ -179,8 +181,8 @@ class _CacheManagementPageState extends State<CacheManagementPage> {
                 icon: const Icon(Icons.restart_alt),
                 label: Text(
                   modifiedCount > 0
-                      ? 'Resetar modificacoes ($modifiedCount)'
-                      : 'Nenhuma modificacao para resetar',
+                      ? 'Resetar modificações ($modifiedCount)'
+                      : 'Nenhuma modificação para resetar',
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.orange,

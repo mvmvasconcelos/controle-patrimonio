@@ -66,3 +66,22 @@ class ErrorResponse(BaseModel):
     success: bool = False
     message: str
     numero_patrimonio: Optional[str] = None
+
+
+class FotoPatrimonioMetadata(BaseModel):
+    """Metadados de uma foto patrimonial."""
+
+    id: int
+    numero_patrimonio: str
+    data_modificacao: datetime
+    sync_origin: str
+
+    class Config:
+        from_attributes = True
+
+
+class FotoPatrimonioListResponse(BaseModel):
+    """Lista de fotos de um item patrimonial."""
+
+    total: int
+    items: list[FotoPatrimonioMetadata]

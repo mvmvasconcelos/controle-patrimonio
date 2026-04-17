@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../database/photo_database.dart';
 import '../providers/patrimonio_provider.dart';
+import '../services/photo_sync_service.dart';
 import 'individual_scan_page.dart';
 import 'batch_scan_page.dart';
 
@@ -219,14 +221,13 @@ class _HomePageState extends State<HomePage> {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primary,
                 ),
-                child: Column(
+                child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    const Icon(Icons.inventory_2,
-                        color: Colors.white, size: 40),
-                    const SizedBox(height: 8),
-                    const Text(
+                    Icon(Icons.inventory_2, color: Colors.white, size: 40),
+                    SizedBox(height: 8),
+                    Text(
                       'Controle Patrimônio',
                       style: TextStyle(
                         color: Colors.white,
@@ -234,7 +235,7 @@ class _HomePageState extends State<HomePage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const Text(
+                    Text(
                       'IFSUL',
                       style: TextStyle(color: Colors.white70),
                     ),
@@ -271,7 +272,19 @@ class _HomePageState extends State<HomePage> {
               ),
               const Divider(),
               ListTile(
-                leading: const Icon(Icons.sync),
+                leading: FutureBuilder<int>(
+                  future: PhotoDatabase.getPendingSyncCount(),
+                  builder: (context, snapshot) {
+                    final pending = snapshot.data ?? 0;
+                    if (pending <= 0) {
+                      return const Icon(Icons.sync);
+                    }
+                    return Badge(
+                      label: Text('$pending'),
+                      child: const Icon(Icons.sync),
+                    );
+                  },
+                ),
                 title: const Text('Sincronizar com servidor'),
                 onTap: () {
                   Navigator.pop(context);
@@ -304,7 +317,42 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _syncData() async {
     final provider = context.read<PatrimonioProvider>();
+    final messenger = ScaffoldMessenger.of(context);
+
+    await provider.sendUpdatesToBackend();
+    if (!mounted) {
+      return;
+    }
+
     await provider.syncWithBackend();
+    if (!mounted) {
+      return;
+    }
+
+    final photoSynced = await PhotoSyncService.syncAll(context);
+
+    if (!mounted) {
+      return;
+    }
+
+    final error = provider.error;
+    if (error != null) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          photoSynced
+              ? 'Sincronização concluída com sucesso.'
+              : 'Dados sincronizados. Sem alterações de foto pendentes.',
+        ),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   void _showAbout() {

@@ -5,6 +5,7 @@ import '../models/patrimonio.dart';
 import '../utils/feedback_utils.dart';
 import '../widgets/scanned_item_modal.dart';
 import '../widgets/barcode_scanner_screen.dart';
+import '../widgets/photo_grid_widget.dart';
 
 class IndividualScanPage extends StatefulWidget {
   final String? selectedSala;
@@ -19,6 +20,7 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
   final TextEditingController _numeroController = TextEditingController();
   Patrimonio? _patrimonioEncontrado;
   bool _isLoading = false;
+  int _photoGridVersion = 0;
 
   @override
   void dispose() {
@@ -176,6 +178,12 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
               if (patrimonio.observacoes != null && patrimonio.observacoes!.isNotEmpty)
             _buildField('Observações', patrimonio.observacoes!),
 
+            PhotoGridWidget(
+              key: ValueKey('scan-photo-grid-${patrimonio.numeroPatrimonio}-$_photoGridVersion'),
+              numeroPatrimonio: patrimonio.numeroPatrimonio,
+              readOnly: true,
+            ),
+
             const SizedBox(height: 16),
 
             // Botões de ação
@@ -231,7 +239,7 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
           width: 2,
         ),
         borderRadius: BorderRadius.circular(8),
-        color: highlight ? highlightColor.withOpacity(0.1) : null,
+        color: highlight ? highlightColor.withValues(alpha: 0.1) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -316,8 +324,10 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
     });
   }
 
-  void _editarPatrimonio(BuildContext context, Patrimonio patrimonio) {
-    showModalBottomSheet(
+  Future<void> _editarPatrimonio(BuildContext context, Patrimonio patrimonio) async {
+    final provider = context.read<PatrimonioProvider>();
+
+    await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -329,6 +339,17 @@ class _IndividualScanPageState extends State<IndividualScanPage> {
         },
       ),
     );
+
+    if (!mounted) {
+      return;
+    }
+
+    // Recarrega o card e força rebuild do grid para refletir inclusão/exclusão de fotos.
+    final refreshed = provider.getPatrimonioByNumero(patrimonio.numeroPatrimonio);
+    setState(() {
+      _patrimonioEncontrado = refreshed ?? _patrimonioEncontrado;
+      _photoGridVersion += 1;
+    });
   }
 
   void _salvarAlteracoes(Patrimonio original, Patrimonio updated) {
