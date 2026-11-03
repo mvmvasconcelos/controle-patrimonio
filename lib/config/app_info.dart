@@ -4,7 +4,6 @@
 // Estas informações são carregadas dinamicamente e podem ser acessadas de qualquer lugar do app.
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class AppInfo {

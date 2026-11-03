@@ -33,6 +33,7 @@ class _AboutPageState extends State<AboutPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     // Verificar status da atualização quando a tela é aberta
     Future.microtask(() {
+      if (!mounted) return;
       final updateProvider = Provider.of<UpdateProvider>(context, listen: false);
       updateProvider.checkIfUpdated();
     });
@@ -420,7 +421,7 @@ class _AboutPageState extends State<AboutPage> with WidgetsBindingObserver {
                             margin: const EdgeInsets.only(bottom: 16),
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                             decoration: BoxDecoration(
-                              color: colorScheme.surfaceVariant,
+                              color: colorScheme.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Column(
@@ -435,7 +436,7 @@ class _AboutPageState extends State<AboutPage> with WidgetsBindingObserver {
                                     padding: const EdgeInsets.only(top: 8.0),
                                     child: LinearProgressIndicator(
                                       value: updateProvider.downloadProgress,
-                                      backgroundColor: colorScheme.onSurfaceVariant.withOpacity(0.2),
+                                      backgroundColor: colorScheme.onSurfaceVariant.withValues(alpha: 0.2),
                                       valueColor: AlwaysStoppedAnimation<Color>(
                                         colorScheme.primary,
                                       ),

@@ -308,4 +308,15 @@ class PatrimonioProvider with ChangeNotifier {
       'synced': synced,
     };
   }
+
+  /// Obter lista de salas únicas cadastradas
+  List<String> getSalasUnicas() {
+    final salas = _patrimonios
+        .map((p) => p.sala)
+        .where((s) => s.isNotEmpty)
+        .toSet()
+        .toList();
+    salas.sort();
+    return salas;
+  }
 }

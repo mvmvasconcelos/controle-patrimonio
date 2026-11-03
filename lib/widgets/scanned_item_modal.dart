@@ -99,7 +99,7 @@ class _ScannedItemModalState extends State<ScannedItemModal> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -245,7 +245,7 @@ class _ScannedItemModalState extends State<ScannedItemModal> {
   }) {
     final color = isHighlighted ? Colors.orange : Colors.grey[700];
     final borderColor = isHighlighted ? Colors.orange : Colors.grey[300];
-    final bgColor = isHighlighted ? Colors.orange.withOpacity(0.05) : Colors.grey[50];
+    final bgColor = isHighlighted ? Colors.orange.withValues(alpha: 0.05) : Colors.grey[50];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

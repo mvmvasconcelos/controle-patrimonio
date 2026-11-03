@@ -45,6 +45,7 @@ log_info "Iniciando compilação do APK..."
 
 # Configurar Git como seguro
 git config --global --add safe.directory /opt/flutter 2>/dev/null || true
+git config --global --add safe.directory /app 2>/dev/null || true
 
 # Verificar estrutura do projeto
 if [ ! -d "lib" ]; then
@@ -141,8 +142,11 @@ flutter pub get --offline 2>/dev/null || flutter pub get
 
 log_info "Compilando APK (isso pode demorar alguns minutos)..."
 
+# Limpar temporary binary stores legados do Gradle para prevenir corrupção no Docker
+rm -rf /root/.gradle/.tmp 2>/dev/null || true
+
 cd android
-if ./gradlew assembleRelease --no-build-cache --no-parallel; then
+if ./gradlew assembleRelease --no-build-cache --no-parallel --no-configuration-cache; then
   log_success "APK compilado"
 else
   log_error "Falha na compilação com Gradle"

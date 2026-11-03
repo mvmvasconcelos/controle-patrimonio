@@ -11,7 +11,7 @@ services:
       - pub_cache:/root/.pub-cache
       - android_sdk:/opt/android-sdk
     ports:
-      - "8090:8090"
+      - "8092:8090"
     environment:
       TERM: xterm
       ANDROID_HOME: /opt/android-sdk
@@ -21,6 +21,28 @@ services:
     command: ["sh", "-c", "tail -f /dev/null"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+  builder:
+    build: .
+    container_name: controle-patrimonio-builder
+    working_dir: /app
+    volumes:
+      - ./:/app:cached
+      - gradle_cache:/root/.gradle
+      - pub_cache:/root/.pub-cache
+      - android_sdk:/opt/android-sdk
+    ports:
+      - "8090:8090"
+    environment:
+      TERM: xterm
+      ANDROID_HOME: /opt/android-sdk
+    stdin_open: true
+    tty: true
+    command: ["sh", "-c", "tail -f /dev/null"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+
 
   backend:
     build: ./backend
