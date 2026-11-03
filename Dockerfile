@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:22.04 AS flutter-sdk
 
 # Non-interactive
 ENV DEBIAN_FRONTEND=noninteractive
@@ -59,3 +59,15 @@ WORKDIR /app
 EXPOSE 8090
 
 CMD ["sh", "-c", "flutter pub get && tail -f /dev/null"]
+
+FROM flutter-sdk AS web-builder
+
+COPY . /app
+RUN flutter pub get && flutter build web --release --base-href /controle-patrimonio/
+
+FROM nginx:alpine AS web
+
+COPY --from=web-builder /app/build/web/ /usr/share/nginx/html/controle-patrimonio/
+COPY nginx/webapp.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80

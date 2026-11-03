@@ -54,6 +54,8 @@ tools/
 proxy.log
 test_proxy.log
 nc_out.txt
+.env
+.env.*
 
 # Session/local troubleshooting notes
 problema_build.md

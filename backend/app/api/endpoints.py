@@ -6,8 +6,9 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from .. import crud, schemas
 from ..database import get_db
+from .auth import current_admin, require_csrf
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(current_admin), Depends(require_csrf)])
 
 
 @router.get("/patrimonio", response_model=schemas.PatrimonioListResponse)

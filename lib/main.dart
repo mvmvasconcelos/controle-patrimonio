@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'database/hive_database.dart';
 import 'database/photo_database.dart';
@@ -11,13 +12,15 @@ import 'screens/report_page.dart';
 import 'screens/data_management_page.dart';
 import 'screens/cache_management_page.dart';
 import 'screens/inventory_list_page.dart';
+import 'screens/web_app.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar Hive
-  await HiveDatabase.init();
-  await PhotoDatabase.init();
+  if (!kIsWeb) {
+    await HiveDatabase.init();
+    await PhotoDatabase.init();
+  }
 
   runApp(const MyApp());
 }
@@ -27,6 +30,17 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (kIsWeb) {
+      return MaterialApp(
+        title: 'Controle Patrimonial',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          useMaterial3: true,
+        ),
+        home: const WebApp(),
+      );
+    }
+
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => PatrimonioProvider()),

@@ -39,8 +39,12 @@ Aplicativo Android desenvolvido em Flutter para apoio às conferências de inven
 ## Infraestrutura
 
 - **App**: Flutter 3.x (Android), Hive + SQLite local (`sqflite`), `mobile_scanner`, `excel`, `spreadsheet_decoder`, `csv`, `file_picker`, `image_picker`, `flutter_image_compress`, `photo_view`
-- **Backend** (suporte): FastAPI + SQLite em `128.1.1.49:6090` — usado para sincronização opcional, não é requisito para o funcionamento principal
+- **Backend web**: FastAPI + SQLite como fonte de verdade do webapp; o fluxo do APK existente continua preservado durante a transição
 - **Build**: Docker (`controle-patrimonio-flutter`)
+
+## Webapp
+
+O webapp Flutter usa o backend como fonte de verdade e está publicado sob `/controle-patrimonio/`. Consulte [docs/deploy-web.md](docs/deploy-web.md) para configurar o administrador por ambiente e iniciar o deploy com Docker Compose.
 
 ---
 
