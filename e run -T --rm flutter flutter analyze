@@ -1,0 +1,29 @@
+[33mcommit 3a641dadaf156ba23f011f9782cb9ed9a6b6afc6[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Vinicius Vasconcelos <marcusvasconcelos@ifsul.edu.br>
+Date:   Fri Apr 17 10:24:31 2026 -0300
+
+    feat: Fotos nos itens escaneados
+
+[33mcommit 8d1535e5fd6f70569d53fb5a382d4ffa42b37e33[m
+Author: Vinicius Vasconcelos <marcusvasconcelos@ifsul.edu.br>
+Date:   Thu Apr 16 10:29:27 2026 -0300
+
+    fix: correção de filtro
+
+[33mcommit 00869e00c1046ddc07bea3f050a5197f76fd91a8[m
+Author: Vinicius Vasconcelos <marcusvasconcelos@ifsul.edu.br>
+Date:   Thu Apr 16 08:50:54 2026 -0300
+
+    fix: resolução de conflitos na documentação e higienização do projeto
+
+[33mcommit 741f21b37d619f8ad4066cba22c6e78c8458ce51[m
+Author: Vinicius Vasconcelos <marcusvasconcelos@ifsul.edu.br>
+Date:   Wed Apr 15 10:30:16 2026 -0300
+
+    fix: ajustes de versionamento e atualização de dependências
+
+[33mcommit 1b37987ec42e158d1c3c87b9b45019667e9979ee[m
+Author: Vinicius Vasconcelos <marcusvasconcelos@ifsul.edu.br>
+Date:   Mon Apr 13 14:00:27 2026 -0300
+
+    feat: importação/exportação de planilha
