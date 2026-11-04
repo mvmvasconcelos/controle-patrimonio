@@ -1,7 +1,7 @@
 """
 Schemas Pydantic para validação de dados
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 from datetime import datetime
 
@@ -19,7 +19,16 @@ class PatrimonioBase(BaseModel):
 
 class PatrimonioCreate(PatrimonioBase):
     """Schema para criação de novo patrimônio"""
-    pass
+
+    @field_validator(
+        "numero_patrimonio", "descricao", "sala", "responsavel", "situacao"
+    )
+    @classmethod
+    def _required_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Campo obrigatório")
+        return value
 
 
 class PatrimonioUpdate(BaseModel):
@@ -30,6 +39,13 @@ class PatrimonioUpdate(BaseModel):
     situacao: Optional[str] = None
     observacoes: Optional[str] = None
     foto_url: Optional[str] = None
+
+    @field_validator("descricao", "sala", "responsavel", "situacao")
+    @classmethod
+    def _required_text(cls, value: Optional[str]) -> str:
+        if value is None or not value.strip():
+            raise ValueError("Campo obrigatório")
+        return value.strip()
 
 
 class PatrimonioResponse(PatrimonioBase):
@@ -42,10 +58,26 @@ class PatrimonioResponse(PatrimonioBase):
         from_attributes = True
 
 
+class PatrimonioInventarioResponse(PatrimonioResponse):
+    """Patrimônio com o estado de Conferência"""
+    conferido: bool = False
+    conferido_em: Optional[datetime] = None
+
+
 class PatrimonioListResponse(BaseModel):
     """Schema para resposta de lista de patrimônios"""
     total: int
-    items: list[PatrimonioResponse]
+    items: list[PatrimonioInventarioResponse]
+
+
+class InventarioFiltrosResponse(BaseModel):
+    salas: list[str]
+    situacoes: list[str]
+
+
+class ConferenciaResponse(BaseModel):
+    numero_patrimonio: str
+    conferido_em: datetime
 
 
 class PatrimonioUpdateRequest(BaseModel):

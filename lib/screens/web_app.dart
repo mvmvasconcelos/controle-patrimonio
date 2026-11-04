@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import '../services/file_download.dart';
 import '../services/web_inventory_repository.dart';
 import 'web_data_management_page.dart';
+import 'web_inventory_list.dart';
+import 'web_patrimony_pages.dart';
 
 export 'web_data_management_page.dart' show PickedInventoryFile;
+export 'web_patrimony_pages.dart' show BarcodeScanner;
 
 class WebApp extends StatefulWidget {
   const WebApp({
@@ -12,11 +15,13 @@ class WebApp extends StatefulWidget {
     this.repository,
     this.pickInventoryFile,
     this.saveDownload,
+    this.scanBarcode,
   });
 
   final WebInventoryRepository? repository;
   final InventoryFilePicker? pickInventoryFile;
   final DownloadSaver? saveDownload;
+  final BarcodeScanner? scanBarcode;
 
   @override
   State<WebApp> createState() => _WebAppState();
@@ -28,7 +33,7 @@ class _WebAppState extends State<WebApp> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   AdminSession? _session;
-  List<InventoryEntry> _inventory = const [];
+  int _inventoryVersion = 0;
   String? _error;
   bool _isLoading = true;
   bool _ownsRepository = false;
@@ -55,7 +60,6 @@ class _WebAppState extends State<WebApp> {
       final session = await _repository.restoreSession();
       if (session != null) {
         _session = session;
-        _inventory = await _repository.loadInventory();
       }
     } catch (error) {
       _error = _message(error);
@@ -80,7 +84,6 @@ class _WebAppState extends State<WebApp> {
         _usernameController.text.trim(),
         _passwordController.text,
       );
-      _inventory = await _repository.loadInventory();
     } catch (error) {
       _error = _message(error);
     }
@@ -97,7 +100,6 @@ class _WebAppState extends State<WebApp> {
     try {
       await _repository.logout();
       _session = null;
-      _inventory = const [];
       _passwordController.clear();
     } catch (error) {
       _error = _message(error);
@@ -115,8 +117,7 @@ class _WebAppState extends State<WebApp> {
           pickFile: widget.pickInventoryFile ?? pickInventoryFileFromBrowser,
           saveDownload: widget.saveDownload ?? saveDownloadedFile,
           onImported: () async {
-            final inventory = await _repository.loadInventory();
-            if (mounted) setState(() => _inventory = inventory);
+            if (mounted) setState(() => _inventoryVersion++);
           },
         ),
       ),
@@ -247,30 +248,12 @@ class _WebAppState extends State<WebApp> {
                 ),
               ],
             ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('${_inventory.length} patrimônios'),
-            ),
-          ),
           Expanded(
-            child: _inventory.isEmpty
-                ? const Center(child: Text('Nenhum patrimônio encontrado.'))
-                : ListView.separated(
-                    itemCount: _inventory.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final entry = _inventory[index];
-                      return ListTile(
-                        title: Text(entry.description),
-                        subtitle: Text(
-                          '${entry.number} • ${entry.room} • ${entry.responsible}',
-                        ),
-                        trailing: Text(entry.status),
-                      );
-                    },
-                  ),
+            child: WebInventoryList(
+              key: ValueKey(_inventoryVersion),
+              repository: _repository,
+              scanBarcode: widget.scanBarcode,
+            ),
           ),
         ],
       ),

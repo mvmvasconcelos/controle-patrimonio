@@ -33,11 +33,22 @@ class _FakeRepository extends WebInventoryRepository {
   }
 
   @override
-  Future<List<InventoryEntry>> loadInventory() async {
+  Future<InventoryFilters> fetchFilters() async =>
+      const InventoryFilters(rooms: [], statuses: []);
+
+  @override
+  Future<InventoryPage> fetchInventory({
+    String? query,
+    String? room,
+    String? status,
+    bool? checked,
+    int offset = 0,
+    int limit = 50,
+  }) async {
     if (!_loggedIn) {
       throw StateError('Sessão ausente');
     }
-    return const [
+    return const InventoryPage(total: 1, items: [
       InventoryEntry(
         number: 'patrimonio-test',
         description: 'Mesa de teste',
@@ -45,7 +56,7 @@ class _FakeRepository extends WebInventoryRepository {
         responsible: 'Administrador',
         status: 'Ativo',
       ),
-    ];
+        ]);
   }
 
   @override
