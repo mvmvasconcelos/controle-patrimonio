@@ -13,6 +13,7 @@ dependencies:
   
   # Network & HTTP
   http: ^1.2.0
+  http_parser: ^4.0.2
   dio: ^5.9.0
   connectivity_plus: ^6.0.0
   

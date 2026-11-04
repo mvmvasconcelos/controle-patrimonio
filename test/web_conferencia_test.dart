@@ -46,6 +46,9 @@ class _Repository extends WebInventoryRepository {
       );
 
   @override
+  Future<List<PatrimonyPhoto>> fetchPhotos(String number) async => const [];
+
+  @override
   Future<AdminSession?> restoreSession() async => const AdminSession(
       username: 'admin', role: 'administrador', csrfToken: 'c');
 

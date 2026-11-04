@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/web_inventory_repository.dart';
+import '../services/web_photo_picker.dart';
 import '../widgets/barcode_scanner_screen.dart';
 
 typedef BarcodeScanner = Future<String?> Function(BuildContext context);
@@ -19,10 +20,12 @@ class WebPatrimonyDetailPage extends StatefulWidget {
     super.key,
     required this.repository,
     required this.entry,
+    this.photoPicker,
   });
 
   final WebInventoryRepository repository;
   final InventoryEntry entry;
+  final WebPhotoPicker? photoPicker;
 
   @override
   State<WebPatrimonyDetailPage> createState() => _WebPatrimonyDetailPageState();
@@ -39,6 +42,19 @@ class _WebPatrimonyDetailPageState extends State<WebPatrimonyDetailPage> {
   bool _busy = false;
   String? _error;
   String? _info;
+  late final WebPhotoPicker _photoPicker =
+      widget.photoPicker ?? BrowserPhotoPicker();
+  List<PatrimonyPhoto> _photos = const [];
+  final _photoBytes = <int, Future<Uint8List>>{};
+  bool _photosBusy = false;
+  String? _photoError;
+  String? _photoInfo;
+
+  @override
+  void initState() {
+    super.initState();
+    _runPhotos(_loadPhotos);
+  }
 
   @override
   void dispose() {
@@ -60,6 +76,147 @@ class _WebPatrimonyDetailPageState extends State<WebPatrimonyDetailPage> {
       _error = errorMessage(error);
     }
     if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _runPhotos(Future<void> Function() action) async {
+    setState(() {
+      _photosBusy = true;
+      _photoError = null;
+      _photoInfo = null;
+    });
+    try {
+      await action();
+    } catch (error) {
+      _photoError = errorMessage(error);
+    }
+    if (mounted) setState(() => _photosBusy = false);
+  }
+
+  Future<void> _loadPhotos() async {
+    _photos = await widget.repository.fetchPhotos(_entry.number);
+  }
+
+  Future<void> _addPhoto(PhotoSource source) => _runPhotos(() async {
+        final bytes = await _photoPicker.pick(source);
+        if (bytes == null) return;
+        await widget.repository.uploadPhoto(_entry.number, bytes);
+        await _loadPhotos();
+        _photoInfo = 'Foto adicionada.';
+      });
+
+  Future<void> _removePhoto(PatrimonyPhoto photo) => _runPhotos(() async {
+        await widget.repository.deletePhoto(_entry.number, photo.id);
+        _photoBytes.remove(photo.id);
+        await _loadPhotos();
+        _photoInfo = 'Foto removida.';
+      });
+
+  Future<void> _openPhoto(PatrimonyPhoto photo) async {
+    final remove = await showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: InteractiveViewer(
+                maxScale: 5,
+                child: _PhotoImage(
+                    bytes: _bytesFor(photo), fit: BoxFit.contain),
+              ),
+            ),
+            OverflowBar(
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Fechar'),
+                ),
+                TextButton.icon(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Remover'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+    if (remove != true || !mounted) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Remover foto?'),
+        content: const Text('Esta ação não pode ser desfeita.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Remover'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _removePhoto(photo);
+  }
+
+  Future<Uint8List> _bytesFor(PatrimonyPhoto photo) => _photoBytes.putIfAbsent(
+      photo.id, () => widget.repository.fetchPhotoBytes(_entry.number, photo.id));
+
+  Widget _photosSection(BuildContext context) {
+    final atLimit = _photos.length >= maxPhotosPerPatrimony;
+    final canAdd = !_photosBusy && !atLimit;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Fotos (${_photos.length}/$maxPhotosPerPatrimony)',
+            style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        if (_photos.isEmpty && !_photosBusy && _photoError == null)
+          const Text('Nenhuma foto anexada.'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final photo in _photos)
+              InkWell(
+                key: ValueKey('photo-${photo.id}'),
+                onTap: _photosBusy ? null : () => _openPhoto(photo),
+                child: SizedBox(
+                  width: 120,
+                  height: 120,
+                  child: _PhotoImage(bytes: _bytesFor(photo)),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          children: [
+            OutlinedButton.icon(
+              onPressed: canAdd ? () => _addPhoto(PhotoSource.camera) : null,
+              icon: const Icon(Icons.photo_camera),
+              label: const Text('Tirar foto'),
+            ),
+            OutlinedButton.icon(
+              onPressed: canAdd ? () => _addPhoto(PhotoSource.file) : null,
+              icon: const Icon(Icons.attach_file),
+              label: const Text('Escolher arquivo'),
+            ),
+          ],
+        ),
+        if (atLimit) const Text('Limite de 3 fotos atingido.'),
+        if (_photosBusy) const LinearProgressIndicator(),
+        if (_photoError != null)
+          Text(_photoError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        if (_photoInfo != null) Text(_photoInfo!),
+      ],
+    );
   }
 
   Future<void> _save() async {
@@ -161,10 +318,36 @@ class _WebPatrimonyDetailPageState extends State<WebPatrimonyDetailPage> {
                 onPressed: _busy ? null : _save,
                 child: const Text('Salvar'),
               ),
+              const Divider(height: 32),
+              _photosSection(context),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _PhotoImage extends StatelessWidget {
+  const _PhotoImage({required this.bytes, this.fit = BoxFit.cover});
+
+  final Future<Uint8List> bytes;
+  final BoxFit fit;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Uint8List>(
+      future: bytes,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(child: Icon(Icons.broken_image));
+        }
+        final data = snapshot.data;
+        if (data == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return Image.memory(data, fit: fit);
+      },
     );
   }
 }
