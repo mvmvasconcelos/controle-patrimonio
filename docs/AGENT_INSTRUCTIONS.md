@@ -76,7 +76,7 @@ Quando o usuario confirmar tarefa concluida e validada:
 1. Rodar testes pertinentes:
     - `docker-compose exec -T flutter sh -lc "flutter test"`
 2. Validar o build web quando aplicavel:
-    - `docker-compose exec -T flutter sh -lc "flutter build web --release --base-href /controle-patrimonio/"`
+    - `docker-compose exec -T flutter sh -lc "flutter build web --release --no-web-resources-cdn --base-href /controle-patrimonio/"`
 
 ## 5. Qualidade e Seguranca
 

@@ -9,3 +9,7 @@ docker-compose up -d --build web backend
 ```
 
 O serviço web escuta na porta `8090` do host. O proxy HTTPS já existente deve encaminhar `/controle-patrimonio/` para essa porta e preservar o cabeçalho `X-Forwarded-Proto`; a configuração no container encaminha `/controle-patrimonio/api/` ao backend.
+
+## Build fora do Docker
+
+O `Dockerfile` já aplica o necessário. Fora dele, use `--no-web-resources-cdn` e ajuste o `flutter_service_worker.js` conforme [offline-sincronizacao.md](offline-sincronizacao.md), senão o app não abre offline.

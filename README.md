@@ -35,7 +35,7 @@ Execute os comandos Flutter no serviço Docker `flutter`:
 ```sh
 docker-compose run --rm -w /app flutter sh -lc "flutter analyze"
 docker-compose run --rm -w /app flutter sh -lc "flutter test"
-docker-compose run --rm -w /app flutter sh -lc "flutter build web --release --base-href /controle-patrimonio/"
+docker-compose run --rm -w /app flutter sh -lc "flutter build web --release --no-web-resources-cdn --base-href /controle-patrimonio/"
 ```
 
 Para executar a API e o webapp localmente, consulte

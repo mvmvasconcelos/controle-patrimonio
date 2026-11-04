@@ -52,3 +52,7 @@ Testes: `test/offline_store_test.dart` (orçamento, descarte, pendentes, erro de
 - Dados ficam em claro no navegador após Sair (necessário para preservar a fila); use perfil/dispositivo de confiança.
 - Criar Patrimônio offline que já exista no servidor é rejeitado na Sincronização e fica marcado com erro.
 - O shell do app offline depende do service worker do Flutter (`flutter_bootstrap.js`), carregado por `web/index.html` (que antes não iniciava o Flutter); o nginx serve `index.html`, `flutter_bootstrap.js` e `flutter_service_worker.js` com `no-cache` para revalidação.
+- O `flutter_service_worker.js` padrão calcula as chaves de cache a partir da origem e ignora o base-href `/controle-patrimonio/`, então nunca serviria o cache. O `Dockerfile` corrige isso após o build, trocando `self.location.origin` por `self.registration.scope` (sem a barra final). Se compilar fora do Docker, aplique o mesmo ajuste.
+- O build usa `--no-web-resources-cdn` para que o CanvasKit seja servido localmente e fique disponível offline.
+- Para validar offline: carregue a página online e recarregue uma segunda vez (a primeira carga não é controlada pelo worker) antes de desligar a rede.
+- As escritas diretas ao servidor têm timeout de 20 s; depois disso caem na fila offline.
