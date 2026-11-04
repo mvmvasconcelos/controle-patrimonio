@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' show MediaType;
 
 import 'file_download.dart';
 import 'web_http_client.dart';
@@ -83,6 +85,21 @@ class NewInventoryEntry {
         if (checked) 'conferido': true,
         if (notes != null && notes!.trim().isNotEmpty) 'observacoes': notes,
       };
+}
+
+const maxPhotoBytes = 5 * 1024 * 1024;
+const maxPhotosPerPatrimony = 3;
+
+class PatrimonyPhoto {
+  const PatrimonyPhoto({required this.id, required this.number});
+
+  final int id;
+  final String number;
+
+  factory PatrimonyPhoto.fromJson(Map<String, dynamic> json) => PatrimonyPhoto(
+        id: json['id'] as int,
+        number: json['numero_patrimonio'] as String,
+      );
 }
 
 class InventoryPage {
@@ -274,6 +291,50 @@ class WebInventoryRepository {
       throw PatrimonyNotFoundException(number.trim());
     }
     _ensureData(response);
+  }
+
+  Future<List<PatrimonyPhoto>> fetchPhotos(String number) async {
+    final response = await _client.get(_patrimonyUri(number, suffix: '/fotos'));
+    _ensureData(response);
+    return (_decode(response)['items'] as List<dynamic>)
+        .map((item) => PatrimonyPhoto.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<Uint8List> fetchPhotoBytes(String number, int photoId) async {
+    final response =
+        await _client.get(_patrimonyUri(number, suffix: '/fotos/$photoId'));
+    _ensureData(response);
+    return response.bodyBytes;
+  }
+
+  Future<PatrimonyPhoto> uploadPhoto(String number, Uint8List bytes) async {
+    if (bytes.length > maxPhotoBytes) {
+      throw Exception(
+          'Foto maior que o limite de ${maxPhotoBytes ~/ (1024 * 1024)} MB');
+    }
+    final request = http.MultipartRequest(
+        'POST', _patrimonyUri(number, suffix: '/fotos'))
+      ..headers['X-CSRF-Token'] = _csrfToken ?? ''
+      ..files.add(http.MultipartFile.fromBytes(
+        'foto',
+        bytes,
+        filename: 'foto.jpg',
+        contentType: MediaType('image', 'jpeg'),
+      ));
+    final response = await http.Response.fromStream(
+      await _client.send(request),
+    );
+    _ensureData(response, expected: 201);
+    return PatrimonyPhoto.fromJson(_decode(response));
+  }
+
+  Future<void> deletePhoto(String number, int photoId) async {
+    final response = await _client.delete(
+      _patrimonyUri(number, suffix: '/fotos/$photoId'),
+      headers: {'X-CSRF-Token': _csrfToken ?? ''},
+    );
+    _ensureData(response, expected: 204);
   }
 
   Map<String, String> get _mutationHeaders => {

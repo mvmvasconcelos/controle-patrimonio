@@ -13,6 +13,8 @@ router = APIRouter(dependencies=[Depends(current_admin), Depends(require_csrf)])
 
 MAX_PAGE_SIZE = 200
 DEFAULT_PAGE_SIZE = 50
+MAX_FOTO_BYTES = 5 * 1024 * 1024
+JPEG_MAGIC = b"\xff\xd8\xff"
 
 
 def _not_found(numero_patrimonio: str) -> HTTPException:
@@ -185,10 +187,25 @@ async def upload_foto_patrimonio(
     foto: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    """Enviar foto para um patrimônio."""
-    image_bytes = await foto.read()
+    """Enviar foto JPEG (até 5 MB) para um patrimônio."""
+    if foto.content_type != "image/jpeg":
+        raise HTTPException(
+            status_code=415, detail="Formato inválido: envie uma imagem JPEG"
+        )
+    image_bytes = await foto.read(MAX_FOTO_BYTES + 1)
     if not image_bytes:
         raise HTTPException(status_code=400, detail="Arquivo de foto vazio")
+    if len(image_bytes) > MAX_FOTO_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Foto maior que o limite de {MAX_FOTO_BYTES // (1024 * 1024)} MB",
+        )
+    if not image_bytes.startswith(JPEG_MAGIC):
+        raise HTTPException(
+            status_code=415, detail="Formato inválido: o arquivo não é um JPEG"
+        )
+    if not crud.get_patrimonio_by_numero(db, numero_patrimonio):
+        raise _not_found(numero_patrimonio)
 
     try:
         return crud.create_foto_patrimonio(
@@ -210,6 +227,8 @@ def list_fotos_patrimonio(
     db: Session = Depends(get_db),
 ):
     """Listar metadados das fotos de um patrimônio."""
+    if not crud.get_patrimonio_by_numero(db, numero_patrimonio):
+        raise _not_found(numero_patrimonio)
     items = crud.get_fotos_by_numero(db, numero_patrimonio)
     return schemas.FotoPatrimonioListResponse(total=len(items), items=items)
 
@@ -225,7 +244,11 @@ def download_foto_patrimonio(
     if not foto:
         raise HTTPException(status_code=404, detail="Foto não encontrada")
 
-    return Response(content=foto.imagem_blob, media_type="image/jpeg")
+    return Response(
+        content=foto.imagem_blob,
+        media_type="image/jpeg",
+        headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 
 @router.delete(

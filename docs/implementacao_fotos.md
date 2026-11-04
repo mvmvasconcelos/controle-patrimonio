@@ -491,3 +491,15 @@ Permissões utilizadas no `AndroidManifest.xml`:
 | 10 itens com 3 fotos cada (300KB/foto) | ~9 MB no banco SQLite |
 | 50 itens com fotos | ~45 MB |
 | Pacotes adicionais no APK | +2–3 MB |
+
+---
+
+## Fotos no Webapp (Issue #6)
+
+No navegador, as fotos ficam apenas no servidor (sem `fotos.db`), por Patrimônio, e sobrevivem à reimportação do Inventário.
+
+- Tela de detalhe do Patrimônio: listar miniaturas, ampliar (zoom), remover (com confirmação), "Tirar foto" (câmera) e "Escolher arquivo".
+- Redimensionamento no navegador antes do envio: canvas, máx. 1280 px no maior lado, JPEG 85%.
+- API (`/api/v1/patrimonio/{numero}/fotos`, cookie de sessão + `X-CSRF-Token` em mutações): somente `image/jpeg` com assinatura JPEG (`415`), máx. 5 MB (`413`), arquivo vazio (`400`), máx. 3 fotos (`409`), Patrimônio inexistente (`404`). `DELETE` é idempotente (`204`). Download com `X-Content-Type-Options: nosniff`.
+- Erros do servidor e do seletor são exibidos na seção de fotos.
+- Fora do escopo: offline/sincronização (#8) e limpeza do código Android/APK (#9).
