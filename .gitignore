@@ -47,3 +47,7 @@ nc_out.txt
 
 # Session/local troubleshooting notes
 problema_build.md
+
+# Resíduos locais do APK removido (contêm keystore; não versionar)
+/android/
+/web/apk/
