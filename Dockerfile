@@ -42,7 +42,13 @@ CMD ["sh", "-c", "flutter pub get && tail -f /dev/null"]
 FROM flutter-sdk AS web-builder
 
 COPY . /app
-RUN flutter pub get && flutter build web --release --base-href /controle-patrimonio/
+RUN flutter pub get && flutter build web --release --no-web-resources-cdn --base-href /controle-patrimonio/
+
+# O service worker do Flutter calcula a chave dos arquivos a partir da origem e
+# ignora o subcaminho do base-href: sem este ajuste ele nunca serve o shell do
+# cache e o app não abre offline em /controle-patrimonio/.
+RUN sed -i 's|var origin = self.location.origin;|var origin = self.registration.scope.replace(/\\/$/, "");|g' build/web/flutter_service_worker.js \
+  && test "$(grep -c 'self.registration.scope' build/web/flutter_service_worker.js)" -eq 2
 
 FROM nginx:alpine AS web
 
