@@ -349,6 +349,8 @@ class OfflineInventoryRepository implements WebInventoryRepository {
       _sessionVerified &&
       !(await _pendingNumbers()).contains(number);
 
+  static const _writeTimeout = Duration(seconds: 20);
+
   /// Tenta o servidor; rede/servidor/sessão indisponíveis caem na fila.
   Future<T> _write<T>(
     String number,
@@ -357,7 +359,9 @@ class OfflineInventoryRepository implements WebInventoryRepository {
   ) async {
     if (await _canGoDirect(number)) {
       try {
-        final result = await direct();
+        // Sem timeout, uma requisição pendurada (rede caída sem erro) travaria
+        // a UI em vez de cair na fila.
+        final result = await direct().timeout(_writeTimeout);
         _setReachable(true);
         return result;
       } on SessionExpiredException {
