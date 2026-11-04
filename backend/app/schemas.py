@@ -2,7 +2,7 @@
 Schemas Pydantic para validação de dados
 """
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import List, Optional
 from datetime import datetime
 
 
@@ -85,3 +85,15 @@ class FotoPatrimonioListResponse(BaseModel):
 
     total: int
     items: list[FotoPatrimonioMetadata]
+
+
+class InventarioImportErro(BaseModel):
+    linha: int
+    mensagem: str
+
+
+class InventarioImportResponse(BaseModel):
+    novos: int
+    atualizados: int
+    inalterados: int
+    erros: List[InventarioImportErro]

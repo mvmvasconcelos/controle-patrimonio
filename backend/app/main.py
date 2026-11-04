@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import sessionmaker
 
 from . import models
-from .api import auth, endpoints
+from .api import auth, endpoints, inventario
 from .api.auth import hash_password, seed_admin
 from .database import Base, SQLALCHEMY_DATABASE_URL, create_database_engine
 
@@ -79,6 +79,7 @@ def create_app(database_url: str | None = None) -> FastAPI:
 
     app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
     app.include_router(endpoints.router, prefix="/api/v1", tags=["patrimonio"])
+    app.include_router(inventario.router, prefix="/api/v1/inventario", tags=["inventario"])
 
     @app.get("/", dependencies=[Depends(auth.current_admin)])
     def root():

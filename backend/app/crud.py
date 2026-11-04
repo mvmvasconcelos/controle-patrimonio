@@ -74,9 +74,15 @@ def update_patrimonio(
     
     # Atualizar apenas campos fornecidos
     update_data = updates.model_dump(exclude_unset=True)
+    changed = False
     for field, value in update_data.items():
-        setattr(db_patrimonio, field, value)
-    
+        if getattr(db_patrimonio, field) != value:
+            setattr(db_patrimonio, field, value)
+            changed = True
+
+    if not changed:
+        return db_patrimonio
+
     db.commit()
     db.refresh(db_patrimonio)
     return db_patrimonio

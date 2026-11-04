@@ -71,4 +71,89 @@ void main() {
     expect(requests[1].headers.containsKey('X-CSRF-Token'), isFalse);
     expect(requests[2].headers['X-CSRF-Token'], csrf);
   });
+
+  test('imports with CSRF multipart and downloads exports with cookies auth', () async {
+    final requests = <http.BaseRequest>[];
+    final client = MockClient((request) async {
+      requests.add(request);
+      if (request.url.path.endsWith('/auth/login')) {
+        return http.Response(
+          jsonEncode({
+            'username': 'u',
+            'role': 'administrador',
+            'csrf_token': 'csrf-test',
+          }),
+          200,
+        );
+      }
+      if (request.url.path.endsWith('/inventario/importar')) {
+        if (request.headers['X-CSRF-Token'] != 'csrf-test') {
+          return http.Response(jsonEncode({'detail': 'csrf'}), 403);
+        }
+        expect(request.headers['content-type'], startsWith('multipart/form-data'));
+        expect(request.body, contains('filename="inv.csv"'));
+        return http.Response(
+          jsonEncode({
+            'novos': 2,
+            'atualizados': 1,
+            'inalterados': 0,
+            'erros': [
+              {'linha': 4, 'mensagem': 'Número do patrimônio ausente'},
+            ],
+          }),
+          200,
+        );
+      }
+      return http.Response.bytes(utf8.encode('numero_patrimonio\n1\n'), 200);
+    });
+    final repository = WebInventoryRepository(
+      client: client,
+      apiBaseUrl: Uri.parse('https://host/api/v1/'),
+    );
+    await repository.login('u', 'p');
+
+    final summary = await repository.importInventory('inv.csv', utf8.encode('x'));
+    final changes = await repository.exportChanges();
+    final report = await repository.exportReport();
+
+    expect(summary.created, 2);
+    expect(summary.updated, 1);
+    expect(summary.unchanged, 0);
+    expect(summary.errors.single.line, 4);
+    expect(changes.filename, 'alteracoes.csv');
+    expect(report.filename, 'relatorio.csv');
+    expect(utf8.decode(report.bytes), contains('numero_patrimonio'));
+    expect(requests.map((r) => r.url.path), [
+      '/api/v1/auth/login',
+      '/api/v1/inventario/importar',
+      '/api/v1/inventario/exportar/alteracoes',
+      '/api/v1/inventario/exportar/relatorio',
+    ]);
+    expect(requests[2].headers.containsKey('X-CSRF-Token'), isFalse);
+  });
+
+  test('import surfaces the server error without a false success', () async {
+    final client = MockClient((request) async {
+      if (request.url.path.endsWith('/auth/login')) {
+        return http.Response(
+          jsonEncode({'username': 'u', 'role': 'administrador', 'csrf_token': 'c'}),
+          200,
+        );
+      }
+      return http.Response(
+        jsonEncode({'detail': 'O arquivo está vazio'}),
+        400,
+      );
+    });
+    final repository = WebInventoryRepository(
+      client: client,
+      apiBaseUrl: Uri.parse('https://host/api/v1/'),
+    );
+    await repository.login('u', 'p');
+
+    expect(
+      () => repository.importInventory('inv.csv', const [1]),
+      throwsA(predicate((e) => e.toString().contains('O arquivo está vazio'))),
+    );
+  });
 }

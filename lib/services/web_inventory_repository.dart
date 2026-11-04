@@ -2,7 +2,10 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'file_download.dart';
 import 'web_http_client.dart';
+
+export 'file_download.dart' show DownloadedFile;
 
 class AdminSession {
   const AdminSession({
@@ -43,6 +46,41 @@ class InventoryEntry {
         room: json['sala'] as String,
         responsible: json['responsavel'] as String,
         status: json['situacao'] as String,
+      );
+}
+
+class ImportRowError {
+  const ImportRowError({required this.line, required this.message});
+
+  final int line;
+  final String message;
+
+  factory ImportRowError.fromJson(Map<String, dynamic> json) => ImportRowError(
+        line: json['linha'] as int,
+        message: json['mensagem'] as String,
+      );
+}
+
+class ImportSummary {
+  const ImportSummary({
+    required this.created,
+    required this.updated,
+    required this.unchanged,
+    required this.errors,
+  });
+
+  final int created;
+  final int updated;
+  final int unchanged;
+  final List<ImportRowError> errors;
+
+  factory ImportSummary.fromJson(Map<String, dynamic> json) => ImportSummary(
+        created: json['novos'] as int,
+        updated: json['atualizados'] as int,
+        unchanged: json['inalterados'] as int,
+        errors: (json['erros'] as List<dynamic>)
+            .map((e) => ImportRowError.fromJson(e as Map<String, dynamic>))
+            .toList(),
       );
 }
 
@@ -92,6 +130,38 @@ class WebInventoryRepository {
     return items
         .map((item) => InventoryEntry.fromJson(item as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<ImportSummary> importInventory(
+      String filename, List<int> bytes) async {
+    final request = http.MultipartRequest('POST', _uri('inventario/importar'))
+      ..headers['X-CSRF-Token'] = _csrfToken ?? ''
+      ..files.add(http.MultipartFile.fromBytes(
+        'arquivo',
+        bytes,
+        filename: filename,
+      ));
+    final response = await http.Response.fromStream(
+      await _client.send(request),
+    );
+    if (response.statusCode != 200) {
+      throw _requestError(response);
+    }
+    return ImportSummary.fromJson(_decode(response));
+  }
+
+  Future<DownloadedFile> exportChanges() =>
+      _download('inventario/exportar/alteracoes', 'alteracoes.csv');
+
+  Future<DownloadedFile> exportReport() =>
+      _download('inventario/exportar/relatorio', 'relatorio.csv');
+
+  Future<DownloadedFile> _download(String path, String filename) async {
+    final response = await _client.get(_uri(path));
+    if (response.statusCode != 200) {
+      throw _requestError(response);
+    }
+    return DownloadedFile(filename, response.bodyBytes);
   }
 
   Future<void> logout() async {
