@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../services/web_inventory_repository.dart';
+import 'web_conference_report.dart';
 import 'web_patrimony_pages.dart';
 
 class WebInventoryList extends StatefulWidget {
@@ -223,6 +224,12 @@ class _WebInventoryListState extends State<WebInventoryList> {
                 )),
                 icon: const Icon(Icons.fact_check),
                 label: const Text('Conferir'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _open(
+                    WebConferenceReportPage(repository: widget.repository)),
+                icon: const Icon(Icons.assessment),
+                label: const Text('Relatório de conferência'),
               ),
               OutlinedButton.icon(
                 onPressed: () =>

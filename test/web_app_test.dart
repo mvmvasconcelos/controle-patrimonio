@@ -37,6 +37,26 @@ class _FakeRepository extends WebInventoryRepository {
       const InventoryFilters(rooms: [], statuses: []);
 
   @override
+  Future<ConferenceReport> fetchConferenceReport({
+    String? room,
+    String? situation,
+  }) async =>
+      const ConferenceReport(
+        total: 1,
+        checked: 1,
+        pending: 0,
+        groups: [
+          ConferenceReportGroup(
+            room: 'Sala de teste',
+            situation: 'Ativo',
+            total: 1,
+            checked: 1,
+            pending: 0,
+          ),
+        ],
+      );
+
+  @override
   Future<InventoryPage> fetchInventory({
     String? query,
     String? room,
@@ -56,7 +76,7 @@ class _FakeRepository extends WebInventoryRepository {
         responsible: 'Administrador',
         status: 'Ativo',
       ),
-        ]);
+    ]);
   }
 
   @override
@@ -68,7 +88,8 @@ class _FakeRepository extends WebInventoryRepository {
   final downloaded = <String>[];
 
   @override
-  Future<ImportSummary> importInventory(String filename, List<int> bytes) async {
+  Future<ImportSummary> importInventory(
+      String filename, List<int> bytes) async {
     importedNames.add(filename);
     return const ImportSummary(
       created: 3,
@@ -117,6 +138,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Mesa de teste'), findsOneWidget);
     expect(find.text(username), findsOneWidget);
+    expect(find.text('Relatório de conferência'), findsOneWidget);
+
+    await tester.tap(find.text('Relatório de conferência'));
+    await tester.pumpAndSettle();
+    expect(find.text('Total: 1'), findsOneWidget);
+    expect(find.text('Conferidos: 1'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Sair'));
     await tester.pumpAndSettle();

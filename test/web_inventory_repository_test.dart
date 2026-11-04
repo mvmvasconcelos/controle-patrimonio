@@ -7,12 +7,13 @@ import 'package:http/testing.dart';
 import 'package:controle_patrimonio/services/web_inventory_repository.dart';
 
 void main() {
-  test('uses the same-origin API and sends CSRF proof only on logout', () async {
+  test('uses the same-origin API and sends CSRF proof only on logout',
+      () async {
     final random = Random.secure();
-    final username = List.generate(20, (_) => random.nextInt(256).toRadixString(16))
-        .join();
-    final password = List.generate(32, (_) => random.nextInt(256).toRadixString(16))
-        .join();
+    final username =
+        List.generate(20, (_) => random.nextInt(256).toRadixString(16)).join();
+    final password =
+        List.generate(32, (_) => random.nextInt(256).toRadixString(16)).join();
     final csrf = base64Url.encode(
       List.generate(32, (_) => random.nextInt(256)),
     );
@@ -72,7 +73,8 @@ void main() {
     expect(requests[2].headers['X-CSRF-Token'], csrf);
   });
 
-  test('imports with CSRF multipart and downloads exports with cookies auth', () async {
+  test('imports with CSRF multipart and downloads exports with cookies auth',
+      () async {
     final requests = <http.BaseRequest>[];
     final client = MockClient((request) async {
       requests.add(request);
@@ -90,7 +92,8 @@ void main() {
         if (request.headers['X-CSRF-Token'] != 'csrf-test') {
           return http.Response(jsonEncode({'detail': 'csrf'}), 403);
         }
-        expect(request.headers['content-type'], startsWith('multipart/form-data'));
+        expect(
+            request.headers['content-type'], startsWith('multipart/form-data'));
         expect(request.body, contains('filename="inv.csv"'));
         return http.Response(
           jsonEncode({
@@ -112,7 +115,8 @@ void main() {
     );
     await repository.login('u', 'p');
 
-    final summary = await repository.importInventory('inv.csv', utf8.encode('x'));
+    final summary =
+        await repository.importInventory('inv.csv', utf8.encode('x'));
     final changes = await repository.exportChanges();
     final report = await repository.exportReport();
 
@@ -132,11 +136,59 @@ void main() {
     expect(requests[2].headers.containsKey('X-CSRF-Token'), isFalse);
   });
 
+  test('loads server-aggregated conference report with filters', () async {
+    final requests = <http.Request>[];
+    final client = MockClient((request) async {
+      requests.add(request);
+      return http.Response(
+        jsonEncode({
+          'total': 4,
+          'conferidos': 1,
+          'pendentes': 3,
+          'grupos': [
+            {
+              'sala': 'Sala A',
+              'situacao': 'Ativo',
+              'total': 4,
+              'conferidos': 1,
+              'pendentes': 3,
+            },
+          ],
+        }),
+        200,
+      );
+    });
+    final repository = WebInventoryRepository(
+      client: client,
+      apiBaseUrl: Uri.parse('https://host/api/v1/'),
+    );
+
+    final report = await repository.fetchConferenceReport(
+      room: 'Sala A',
+      situation: 'Ativo',
+    );
+
+    expect(
+        requests.single.url.path, '/api/v1/patrimonio/relatorio/conferencia');
+    expect(requests.single.url.queryParameters, {
+      'sala': 'Sala A',
+      'situacao': 'Ativo',
+    });
+    expect(report.total, 4);
+    expect(report.checked, 1);
+    expect(report.pending, 3);
+    expect(report.groups.single.room, 'Sala A');
+    expect(report.groups.single.situation, 'Ativo');
+    expect(report.groups.single.checked, 1);
+    expect(report.groups.single.pending, 3);
+  });
+
   test('import surfaces the server error without a false success', () async {
     final client = MockClient((request) async {
       if (request.url.path.endsWith('/auth/login')) {
         return http.Response(
-          jsonEncode({'username': 'u', 'role': 'administrador', 'csrf_token': 'c'}),
+          jsonEncode(
+              {'username': 'u', 'role': 'administrador', 'csrf_token': 'c'}),
           200,
         );
       }

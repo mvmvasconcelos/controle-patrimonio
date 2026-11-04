@@ -2,7 +2,7 @@
 Operações CRUD para o banco de dados
 """
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import case, func
 from typing import Optional, List
 from . import models, schemas
 
@@ -103,6 +103,57 @@ def get_filtros(db: Session) -> dict:
     return {
         "salas": distinct(models.Patrimonio.sala),
         "situacoes": distinct(models.Patrimonio.situacao),
+    }
+
+
+def get_conferencia_report(
+    db: Session,
+    sala: Optional[str] = None,
+    situacao: Optional[str] = None,
+) -> dict:
+    """Agrega o estado da Conferência por sala e situação patrimonial."""
+    conferido = case((models.Conferencia.id.isnot(None), 1), else_=0)
+    pendente = case((models.Conferencia.id.is_(None), 1), else_=0)
+    query = (
+        db.query(
+            models.Patrimonio.sala.label("sala"),
+            models.Patrimonio.situacao.label("situacao"),
+            func.count(models.Patrimonio.id).label("total"),
+            func.sum(conferido).label("conferidos"),
+            func.sum(pendente).label("pendentes"),
+        )
+        .outerjoin(
+            models.Conferencia,
+            models.Conferencia.numero_patrimonio == models.Patrimonio.numero_patrimonio,
+        )
+    )
+    if sala:
+        query = query.filter(models.Patrimonio.sala == sala)
+    if situacao:
+        query = query.filter(models.Patrimonio.situacao == situacao)
+
+    rows = query.group_by(
+        models.Patrimonio.sala,
+        models.Patrimonio.situacao,
+    ).order_by(
+        models.Patrimonio.sala,
+        models.Patrimonio.situacao,
+    ).all()
+    groups = [
+        {
+            "sala": row.sala,
+            "situacao": row.situacao,
+            "total": int(row.total),
+            "conferidos": int(row.conferidos or 0),
+            "pendentes": int(row.pendentes or 0),
+        }
+        for row in rows
+    ]
+    return {
+        "total": sum(group["total"] for group in groups),
+        "conferidos": sum(group["conferidos"] for group in groups),
+        "pendentes": sum(group["pendentes"] for group in groups),
+        "grupos": groups,
     }
 
 
