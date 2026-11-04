@@ -1,11 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../services/file_download.dart';
 import '../services/web_inventory_repository.dart';
+import 'web_data_management_page.dart';
+
+export 'web_data_management_page.dart' show PickedInventoryFile;
 
 class WebApp extends StatefulWidget {
-  const WebApp({super.key, this.repository});
+  const WebApp({
+    super.key,
+    this.repository,
+    this.pickInventoryFile,
+    this.saveDownload,
+  });
 
   final WebInventoryRepository? repository;
+  final InventoryFilePicker? pickInventoryFile;
+  final DownloadSaver? saveDownload;
 
   @override
   State<WebApp> createState() => _WebAppState();
@@ -94,6 +105,22 @@ class _WebAppState extends State<WebApp> {
     if (mounted) {
       setState(() => _isLoading = false);
     }
+  }
+
+  void _openDataManagement() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => WebDataManagementPage(
+          repository: _repository,
+          pickFile: widget.pickInventoryFile ?? pickInventoryFileFromBrowser,
+          saveDownload: widget.saveDownload ?? saveDownloadedFile,
+          onImported: () async {
+            final inventory = await _repository.loadInventory();
+            if (mounted) setState(() => _inventory = inventory);
+          },
+        ),
+      ),
+    );
   }
 
   String _message(Object error) =>
@@ -195,6 +222,11 @@ class _WebAppState extends State<WebApp> {
                 ),
               ),
             ),
+          ),
+          IconButton(
+            tooltip: 'Gestão de dados',
+            onPressed: _openDataManagement,
+            icon: const Icon(Icons.storage),
           ),
           IconButton(
             tooltip: 'Sair',

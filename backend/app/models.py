@@ -60,3 +60,13 @@ class FotoPatrimonio(Base):
 
     def __repr__(self):
         return f"<FotoPatrimonio(id={self.id}, numero={self.numero_patrimonio})>"
+
+
+class Conferencia(Base):
+    """Registro de que um patrimônio foi encontrado; independe da reimportação do Inventário."""
+
+    __tablename__ = "conferencias"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    numero_patrimonio = Column(String, unique=True, index=True, nullable=False)
+    conferido_em = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

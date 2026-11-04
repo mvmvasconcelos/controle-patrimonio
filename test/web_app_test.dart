@@ -52,6 +52,28 @@ class _FakeRepository extends WebInventoryRepository {
   Future<void> logout() async {
     _loggedIn = false;
   }
+
+  final importedNames = <String>[];
+  final downloaded = <String>[];
+
+  @override
+  Future<ImportSummary> importInventory(String filename, List<int> bytes) async {
+    importedNames.add(filename);
+    return const ImportSummary(
+      created: 3,
+      updated: 2,
+      unchanged: 1,
+      errors: [ImportRowError(line: 5, message: 'Descrição ausente')],
+    );
+  }
+
+  @override
+  Future<DownloadedFile> exportChanges() async =>
+      DownloadedFile('alteracoes.csv', const [1]);
+
+  @override
+  Future<DownloadedFile> exportReport() async =>
+      DownloadedFile('relatorio.csv', const [2]);
 }
 
 String _randomValue() {
@@ -88,5 +110,43 @@ void main() {
     await tester.tap(find.byTooltip('Sair'));
     await tester.pumpAndSettle();
     expect(find.text('Acesso do Administrador'), findsOneWidget);
+  });
+
+  testWidgets('data management imports, shows summary and downloads exports',
+      (tester) async {
+    final repository = _FakeRepository('u', 'p');
+    final downloads = <String>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: WebApp(
+          repository: repository,
+          pickInventoryFile: () async => PickedInventoryFile('inv.csv', const [1]),
+          saveDownload: (file) async => downloads.add(file.filename),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'u');
+    await tester.enterText(find.byType(TextField).at(1), 'p');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Gestão de dados'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gestão de dados'), findsOneWidget);
+
+    await tester.tap(find.text('Importar Inventário'));
+    await tester.pumpAndSettle();
+    expect(repository.importedNames, ['inv.csv']);
+    expect(find.text('Novos: 3'), findsOneWidget);
+    expect(find.text('Atualizados: 2'), findsOneWidget);
+    expect(find.text('Com erro: 1'), findsOneWidget);
+    expect(find.text('Linha 5: Descrição ausente'), findsOneWidget);
+
+    await tester.tap(find.text('Exportar alterações'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Exportar relatório'));
+    await tester.pumpAndSettle();
+    expect(downloads, ['alteracoes.csv', 'relatorio.csv']);
   });
 }
