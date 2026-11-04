@@ -40,6 +40,9 @@ class PatrimonioUpdate(BaseModel):
     situacao: Optional[str] = None
     observacoes: Optional[str] = None
     foto_url: Optional[str] = None
+    editado_em: Optional[datetime] = Field(
+        None, description="Horário da edição no cliente (last-write-wins)"
+    )
 
     @field_validator("descricao", "sala", "responsavel", "situacao")
     @classmethod
@@ -63,6 +66,8 @@ class PatrimonioInventarioResponse(PatrimonioResponse):
     """Patrimônio com o estado de Conferência"""
     conferido: bool = False
     conferido_em: Optional[datetime] = None
+    editado_em: Optional[datetime] = None
+    edicao_aplicada: bool = True
 
 
 class PatrimonioListResponse(BaseModel):
@@ -89,6 +94,12 @@ class ConferenciaRelatorioResponse(BaseModel):
     conferidos: int
     pendentes: int
     grupos: list[ConferenciaRelatorioGrupo]
+
+
+class ConferenciaRequest(BaseModel):
+    editado_em: Optional[datetime] = Field(
+        None, description="Horário da Conferência no cliente"
+    )
 
 
 class ConferenciaResponse(BaseModel):

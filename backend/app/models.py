@@ -74,3 +74,13 @@ class Conferencia(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     numero_patrimonio = Column(String, unique=True, index=True, nullable=False)
     conferido_em = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+class PatrimonioEdicao(Base):
+    """Horário (do cliente) da última edição aplicada a um Patrimônio, base do last-write-wins."""
+
+    __tablename__ = "patrimonio_edicoes"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    numero_patrimonio = Column(String, unique=True, index=True, nullable=False)
+    editado_em = Column(DateTime(timezone=True), nullable=False)

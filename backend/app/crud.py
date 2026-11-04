@@ -1,6 +1,7 @@
 """
 Operações CRUD para o banco de dados
 """
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from sqlalchemy import case, func
 from typing import Optional, List
@@ -29,10 +30,16 @@ def get_patrimonios(
     Retorna tupla (items, total); cada item inclui o estado de Conferência.
     """
     query = db.query(
-        models.Patrimonio, models.Conferencia.conferido_em
+        models.Patrimonio,
+        models.Conferencia.conferido_em,
+        models.PatrimonioEdicao.editado_em,
     ).outerjoin(
         models.Conferencia,
         models.Conferencia.numero_patrimonio == models.Patrimonio.numero_patrimonio,
+    ).outerjoin(
+        models.PatrimonioEdicao,
+        models.PatrimonioEdicao.numero_patrimonio
+        == models.Patrimonio.numero_patrimonio,
     )
 
     if q and q.strip():
@@ -64,17 +71,45 @@ def get_patrimonios(
         query = query.limit(limit)
 
     items = [
-        _with_conferencia(item, conferido_em) for item, conferido_em in query.all()
+        _with_conferencia(item, conferido_em, editado_em)
+        for item, conferido_em, editado_em in query.all()
     ]
 
     return items, total
 
 
-def _with_conferencia(item: models.Patrimonio, conferido_em) -> dict:
+def _with_conferencia(item: models.Patrimonio, conferido_em, editado_em=None) -> dict:
     data = schemas.PatrimonioResponse.model_validate(item).model_dump()
     data["conferido"] = conferido_em is not None
     data["conferido_em"] = conferido_em
+    data["editado_em"] = editado_em
     return data
+
+
+MAX_CLOCK_SKEW = timedelta(minutes=5)
+
+
+def normalize_client_time(value: Optional[datetime]) -> datetime:
+    """UTC aware; ausente ou adiantado além da tolerância vira o horário do servidor."""
+    now = datetime.now(timezone.utc)
+    if value is None:
+        return now
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    value = value.astimezone(timezone.utc)
+    return now if value > now + MAX_CLOCK_SKEW else value
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+def get_editado_em(db: Session, numero_patrimonio: str):
+    return (
+        db.query(models.PatrimonioEdicao.editado_em)
+        .filter(models.PatrimonioEdicao.numero_patrimonio == numero_patrimonio)
+        .scalar()
+    )
 
 
 def get_conferido_em(db: Session, numero_patrimonio: str):
@@ -89,7 +124,11 @@ def get_patrimonio_inventario(db: Session, numero_patrimonio: str) -> Optional[d
     item = get_patrimonio_by_numero(db, numero_patrimonio)
     if not item:
         return None
-    return _with_conferencia(item, get_conferido_em(db, numero_patrimonio))
+    return _with_conferencia(
+        item,
+        get_conferido_em(db, numero_patrimonio),
+        get_editado_em(db, numero_patrimonio),
+    )
 
 
 def get_filtros(db: Session) -> dict:
@@ -157,14 +196,23 @@ def get_conferencia_report(
     }
 
 
-def conferir_patrimonio(db: Session, numero_patrimonio: str) -> Optional[dict]:
-    """Registra a Conferência de forma idempotente; None se o Patrimônio não existe."""
+def conferir_patrimonio(
+    db: Session, numero_patrimonio: str, conferido_em_cliente: Optional[datetime] = None
+) -> Optional[dict]:
+    """Registra a Conferência de forma idempotente; None se o Patrimônio não existe.
+
+    O primeiro horário registrado é mantido; reenvios da fila offline não o alteram."""
     if not get_patrimonio_by_numero(db, numero_patrimonio):
         return None
     conferido_em = get_conferido_em(db, numero_patrimonio)
     repetida = conferido_em is not None
     if conferido_em is None:
-        db.add(models.Conferencia(numero_patrimonio=numero_patrimonio))
+        db.add(
+            models.Conferencia(
+                numero_patrimonio=numero_patrimonio,
+                conferido_em=normalize_client_time(conferido_em_cliente),
+            )
+        )
         db.commit()
         conferido_em = get_conferido_em(db, numero_patrimonio)
     return {
@@ -201,7 +249,7 @@ def update_patrimonio(
         return None
     
     # Atualizar apenas campos fornecidos
-    update_data = updates.model_dump(exclude_unset=True)
+    update_data = updates.model_dump(exclude_unset=True, exclude={"editado_em"})
     changed = False
     for field, value in update_data.items():
         if getattr(db_patrimonio, field) != value:
@@ -214,6 +262,35 @@ def update_patrimonio(
     db.commit()
     db.refresh(db_patrimonio)
     return db_patrimonio
+
+
+def edit_patrimonio_lww(
+    db: Session, numero_patrimonio: str, updates: schemas.PatrimonioUpdate
+) -> Optional[bool]:
+    """Edita com last-write-wins por Patrimônio.
+
+    None se não existe; False se a edição é mais antiga que a já aplicada e foi descartada."""
+    if not get_patrimonio_by_numero(db, numero_patrimonio):
+        return None
+    editado_em = normalize_client_time(updates.editado_em)
+    edicao = (
+        db.query(models.PatrimonioEdicao)
+        .filter(models.PatrimonioEdicao.numero_patrimonio == numero_patrimonio)
+        .first()
+    )
+    if edicao is not None and editado_em < _as_utc(edicao.editado_em):
+        return False
+    update_patrimonio(db, numero_patrimonio, updates)
+    if edicao is None:
+        db.add(
+            models.PatrimonioEdicao(
+                numero_patrimonio=numero_patrimonio, editado_em=editado_em
+            )
+        )
+    else:
+        edicao.editado_em = editado_em
+    db.commit()
+    return True
 
 
 def delete_patrimonio(db: Session, numero_patrimonio: str) -> bool:
