@@ -115,6 +115,25 @@ class PatrimonyNotFoundException implements Exception {
   String toString() => 'Patrimônio $number não encontrado no Inventário.';
 }
 
+class ConferenciaResult {
+  const ConferenciaResult({
+    required this.number,
+    required this.repeated,
+    required this.checkedAt,
+  });
+
+  final String number;
+  final bool repeated;
+  final DateTime checkedAt;
+
+  factory ConferenciaResult.fromJson(Map<String, dynamic> json) =>
+      ConferenciaResult(
+        number: json['numero_patrimonio'] as String,
+        repeated: json['repetida'] as bool,
+        checkedAt: DateTime.parse(json['conferido_em'] as String),
+      );
+}
+
 class ImportRowError {
   const ImportRowError({required this.line, required this.message});
 
@@ -265,7 +284,7 @@ class WebInventoryRepository {
     return InventoryEntry.fromJson(_decode(response));
   }
 
-  Future<void> markChecked(String number) async {
+  Future<ConferenciaResult> markChecked(String number) async {
     final response = await _client.post(
       _patrimonyUri(number, suffix: '/conferencia'),
       headers: _mutationHeaders,
@@ -274,6 +293,7 @@ class WebInventoryRepository {
       throw PatrimonyNotFoundException(number.trim());
     }
     _ensureData(response);
+    return ConferenciaResult.fromJson(_decode(response));
   }
 
   Map<String, String> get _mutationHeaders => {

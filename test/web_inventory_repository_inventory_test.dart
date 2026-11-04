@@ -97,15 +97,31 @@ void main() {
     final (repository, requests) = await _logged((_) => http.Response(
         jsonEncode({
           'numero_patrimonio': 'a/b',
-          'conferido_em': '2026-01-01T00:00:00'
+          'conferido_em': '2026-01-01T00:00:00',
+          'repetida': false,
         }),
         200));
-    await repository.markChecked(' a/b ');
+    final result = await repository.markChecked(' a/b ');
     final request = requests.single;
+    expect(result.repeated, isFalse);
     expect(request.method, 'POST');
     expect(request.url.toString(),
         'https://host/api/v1/patrimonio/a%2Fb/conferencia');
     expect(request.headers['X-CSRF-Token'], 'csrf-1');
+  });
+
+  test('markChecked reports an idempotent repetition from the API', () async {
+    final (repository, _) = await _logged((_) => http.Response(
+        jsonEncode({
+          'numero_patrimonio': '100',
+          'conferido_em': '2026-01-01T00:00:00',
+          'repetida': true,
+        }),
+        200));
+
+    final result = await repository.markChecked('100');
+
+    expect(result.repeated, isTrue);
   });
 
   test('markChecked of unknown number throws PatrimonyNotFoundException',

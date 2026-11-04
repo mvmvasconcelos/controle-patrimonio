@@ -79,6 +79,7 @@ class InventarioFiltrosResponse(BaseModel):
 class ConferenciaResponse(BaseModel):
     numero_patrimonio: str
     conferido_em: datetime
+    repetida: bool
 
 
 class PatrimonioUpdateRequest(BaseModel):
