@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   flutter:
-    build: .
+    build:
+      context: .
+      target: flutter-sdk
     container_name: controle-patrimonio-flutter
     working_dir: /app
     volumes:
@@ -23,7 +25,9 @@ services:
       - "host.docker.internal:host-gateway"
 
   builder:
-    build: .
+    build:
+      context: .
+      target: flutter-sdk
     container_name: controle-patrimonio-builder
     working_dir: /app
     volumes:
@@ -32,7 +36,7 @@ services:
       - pub_cache:/root/.pub-cache
       - android_sdk:/opt/android-sdk
     ports:
-      - "8090:8090"
+      - "8093:8090"
     environment:
       TERM: xterm
       ANDROID_HOME: /opt/android-sdk
@@ -55,6 +59,21 @@ services:
       - "6090:8000"
     environment:
       PYTHONUNBUFFERED: 1
+      ADMIN_USER: ${ADMIN_USER:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    ports:
+      - "8090:80"
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
