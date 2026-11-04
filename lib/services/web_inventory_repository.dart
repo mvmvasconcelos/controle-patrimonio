@@ -32,6 +32,8 @@ class InventoryEntry {
     required this.room,
     required this.responsible,
     required this.status,
+    this.notes,
+    this.checked = false,
   });
 
   final String number;
@@ -39,6 +41,8 @@ class InventoryEntry {
   final String room;
   final String responsible;
   final String status;
+  final String? notes;
+  final bool checked;
 
   factory InventoryEntry.fromJson(Map<String, dynamic> json) => InventoryEntry(
         number: json['numero_patrimonio'] as String,
@@ -46,7 +50,69 @@ class InventoryEntry {
         room: json['sala'] as String,
         responsible: json['responsavel'] as String,
         status: json['situacao'] as String,
+        notes: json['observacoes'] as String?,
+        checked: json['conferido'] as bool? ?? false,
       );
+}
+
+class NewInventoryEntry {
+  const NewInventoryEntry({
+    required this.number,
+    required this.description,
+    required this.room,
+    required this.responsible,
+    required this.status,
+    this.checked = false,
+    this.notes,
+  });
+
+  final String number;
+  final String description;
+  final String room;
+  final String responsible;
+  final String status;
+  final bool checked;
+  final String? notes;
+
+  Map<String, dynamic> toJson() => {
+        'numero_patrimonio': number,
+        'descricao': description,
+        'sala': room,
+        'responsavel': responsible,
+        'situacao': status,
+        if (checked) 'conferido': true,
+        if (notes != null && notes!.trim().isNotEmpty) 'observacoes': notes,
+      };
+}
+
+class InventoryPage {
+  const InventoryPage({required this.total, required this.items});
+
+  final int total;
+  final List<InventoryEntry> items;
+}
+
+class InventoryFilters {
+  const InventoryFilters({required this.rooms, required this.statuses});
+
+  final List<String> rooms;
+  final List<String> statuses;
+}
+
+class SessionExpiredException implements Exception {
+  const SessionExpiredException();
+
+  @override
+  String toString() => 'Sessão expirada. Entre novamente para continuar.';
+}
+
+class PatrimonyNotFoundException implements Exception {
+  const PatrimonyNotFoundException(this.number);
+
+  final String number;
+
+  @override
+  String toString() => 'Patrimônio $number não encontrado no Inventário.';
 }
 
 class ImportRowError {
@@ -130,6 +196,97 @@ class WebInventoryRepository {
     return items
         .map((item) => InventoryEntry.fromJson(item as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<InventoryPage> fetchInventory({
+    String? query,
+    String? room,
+    String? status,
+    bool? checked,
+    int offset = 0,
+    int limit = 50,
+  }) async {
+    final params = <String, String>{
+      if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+      if (room != null && room.isNotEmpty) 'sala': room,
+      if (status != null && status.isNotEmpty) 'situacao': status,
+      if (checked != null) 'conferido': checked.toString(),
+      'offset': '$offset',
+      'limit': '$limit',
+    };
+    final response =
+        await _client.get(_uri('patrimonio').replace(queryParameters: params));
+    _ensureData(response);
+    final body = _decode(response);
+    return InventoryPage(
+      total: body['total'] as int,
+      items: (body['items'] as List<dynamic>)
+          .map((item) => InventoryEntry.fromJson(item as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+
+  Future<InventoryFilters> fetchFilters() async {
+    final response = await _client.get(_uri('patrimonio/filtros'));
+    _ensureData(response);
+    final body = _decode(response);
+    return InventoryFilters(
+      rooms: (body['salas'] as List<dynamic>).cast<String>(),
+      statuses: (body['situacoes'] as List<dynamic>).cast<String>(),
+    );
+  }
+
+  Future<InventoryEntry?> fetchEntry(String number) async {
+    final response = await _client.get(_patrimonyUri(number));
+    if (response.statusCode == 404) return null;
+    _ensureData(response);
+    return InventoryEntry.fromJson(_decode(response));
+  }
+
+  Future<InventoryEntry> updateEntry(
+      String number, Map<String, String?> fields) async {
+    final response = await _client.patch(
+      _patrimonyUri(number),
+      headers: _mutationHeaders,
+      body: jsonEncode(fields),
+    );
+    if (response.statusCode == 404) throw PatrimonyNotFoundException(number);
+    _ensureData(response);
+    return InventoryEntry.fromJson(_decode(response));
+  }
+
+  Future<InventoryEntry> createEntry(NewInventoryEntry entry) async {
+    final response = await _client.post(
+      _uri('patrimonio'),
+      headers: _mutationHeaders,
+      body: jsonEncode(entry.toJson()),
+    );
+    _ensureData(response, expected: 201);
+    return InventoryEntry.fromJson(_decode(response));
+  }
+
+  Future<void> markChecked(String number) async {
+    final response = await _client.post(
+      _patrimonyUri(number, suffix: '/conferencia'),
+      headers: _mutationHeaders,
+    );
+    if (response.statusCode == 404) {
+      throw PatrimonyNotFoundException(number.trim());
+    }
+    _ensureData(response);
+  }
+
+  Map<String, String> get _mutationHeaders => {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': _csrfToken ?? '',
+      };
+
+  Uri _patrimonyUri(String number, {String suffix = ''}) => _apiBaseUrl
+      .resolve('patrimonio/${Uri.encodeComponent(number.trim())}$suffix');
+
+  void _ensureData(http.Response response, {int expected = 200}) {
+    if (response.statusCode == 401) throw const SessionExpiredException();
+    if (response.statusCode != expected) throw _requestError(response);
   }
 
   Future<ImportSummary> importInventory(

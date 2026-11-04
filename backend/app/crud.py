@@ -20,39 +20,111 @@ def get_patrimonios(
     limit: Optional[int] = None,
     sala: Optional[str] = None,
     responsavel: Optional[str] = None,
-    situacao: Optional[str] = None
-) -> tuple[List[models.Patrimonio], int]:
+    situacao: Optional[str] = None,
+    q: Optional[str] = None,
+    conferido: Optional[bool] = None,
+) -> tuple[list[dict], int]:
     """
-    Buscar patrimônios com filtros opcionais
-    Retorna tupla (items, total)
+    Buscar patrimônios com filtros opcionais, em ordem estável por número.
+    Retorna tupla (items, total); cada item inclui o estado de Conferência.
     """
-    query = db.query(models.Patrimonio)
-    
-    # Aplicar filtros
+    query = db.query(
+        models.Patrimonio, models.Conferencia.conferido_em
+    ).outerjoin(
+        models.Conferencia,
+        models.Conferencia.numero_patrimonio == models.Patrimonio.numero_patrimonio,
+    )
+
+    if q and q.strip():
+        escaped = (
+            q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+        pattern = f"%{escaped}%"
+        query = query.filter(
+            models.Patrimonio.numero_patrimonio.ilike(pattern, escape="\\")
+            | models.Patrimonio.descricao.ilike(pattern, escape="\\")
+        )
+    if conferido is True:
+        query = query.filter(models.Conferencia.id.isnot(None))
+    elif conferido is False:
+        query = query.filter(models.Conferencia.id.is_(None))
     if sala:
         query = query.filter(models.Patrimonio.sala == sala)
     if responsavel:
         query = query.filter(models.Patrimonio.responsavel == responsavel)
     if situacao:
         query = query.filter(models.Patrimonio.situacao == situacao)
-    
-    # Contar total
+
     total = query.count()
-    
-    # Aplicar paginação
-    query = query.offset(skip)
+
+    query = query.order_by(
+        models.Patrimonio.numero_patrimonio, models.Patrimonio.id
+    ).offset(skip)
     if limit:
         query = query.limit(limit)
-    
-    items = query.all()
-    
+
+    items = [
+        _with_conferencia(item, conferido_em) for item, conferido_em in query.all()
+    ]
+
     return items, total
 
 
+def _with_conferencia(item: models.Patrimonio, conferido_em) -> dict:
+    data = schemas.PatrimonioResponse.model_validate(item).model_dump()
+    data["conferido"] = conferido_em is not None
+    data["conferido_em"] = conferido_em
+    return data
+
+
+def get_conferido_em(db: Session, numero_patrimonio: str):
+    return (
+        db.query(models.Conferencia.conferido_em)
+        .filter(models.Conferencia.numero_patrimonio == numero_patrimonio)
+        .scalar()
+    )
+
+
+def get_patrimonio_inventario(db: Session, numero_patrimonio: str) -> Optional[dict]:
+    item = get_patrimonio_by_numero(db, numero_patrimonio)
+    if not item:
+        return None
+    return _with_conferencia(item, get_conferido_em(db, numero_patrimonio))
+
+
+def get_filtros(db: Session) -> dict:
+    def distinct(column):
+        return [
+            value
+            for (value,) in db.query(column).distinct().order_by(column)
+            if value
+        ]
+
+    return {
+        "salas": distinct(models.Patrimonio.sala),
+        "situacoes": distinct(models.Patrimonio.situacao),
+    }
+
+
+def conferir_patrimonio(db: Session, numero_patrimonio: str) -> Optional[dict]:
+    """Registra a Conferência de forma idempotente; None se o Patrimônio não existe."""
+    if not get_patrimonio_by_numero(db, numero_patrimonio):
+        return None
+    conferido_em = get_conferido_em(db, numero_patrimonio)
+    if conferido_em is None:
+        db.add(models.Conferencia(numero_patrimonio=numero_patrimonio))
+        db.commit()
+        conferido_em = get_conferido_em(db, numero_patrimonio)
+    return {"numero_patrimonio": numero_patrimonio, "conferido_em": conferido_em}
+
+
 def create_patrimonio(db: Session, patrimonio: schemas.PatrimonioCreate) -> models.Patrimonio:
-    """Criar novo patrimônio"""
-    db_patrimonio = models.Patrimonio(**patrimonio.model_dump())
+    """Criar um Patrimônio e, quando solicitado, sua Conferência atomicamente."""
+    data = patrimonio.model_dump(exclude={"conferido"})
+    db_patrimonio = models.Patrimonio(**data)
     db.add(db_patrimonio)
+    if patrimonio.conferido:
+        db.add(models.Conferencia(numero_patrimonio=patrimonio.numero_patrimonio))
     db.commit()
     db.refresh(db_patrimonio)
     return db_patrimonio
