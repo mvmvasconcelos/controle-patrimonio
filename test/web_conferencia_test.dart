@@ -1,4 +1,6 @@
 import 'package:controle_patrimonio/screens/web_app.dart';
+import 'package:controle_patrimonio/screens/web_batch_conferencia_page.dart';
+import 'package:controle_patrimonio/services/batch_feedback_stub.dart';
 import 'package:controle_patrimonio/services/web_inventory_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -204,6 +206,50 @@ void main() {
     expect(find.textContaining('Falha de rede'), findsOneWidget);
     expect(find.textContaining('Conferência registrada'), findsNothing);
     expect(find.text('1 resultado nesta sessão'), findsOneWidget);
+  });
+
+  testWidgets('batch feedback distinguishes success, duplicate and not found',
+      (tester) async {
+    final repository = _Repository();
+    final feedback = <BatchFeedbackKind>[];
+    await tester.pumpWidget(MaterialApp(
+      home: WebBatchConferenciaPage(
+        repository: repository,
+        onFeedback: (kind) async => feedback.add(kind),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    final number = find.byType(TextField);
+    for (final value in ['100', '100', '999']) {
+      await tester.enterText(number, value);
+      await tester.tap(find.text('Registrar Conferência'));
+      await tester.pumpAndSettle();
+    }
+
+    expect(feedback, [
+      BatchFeedbackKind.success,
+      BatchFeedbackKind.duplicate,
+      BatchFeedbackKind.notFound,
+    ]);
+  });
+
+  testWidgets('batch feedback playback failure is visible without losing result',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      home: WebBatchConferenciaPage(
+        repository: _Repository(),
+        onFeedback: (_) async => throw StateError('audio blocked'),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), '100');
+    await tester.tap(find.text('Registrar Conferência'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Feedback sonoro indisponível'), findsOneWidget);
+    expect(find.textContaining('Conferência registrada'), findsOneWidget);
   });
 
   testWidgets('camera scan result is checked; manual entry stays available',

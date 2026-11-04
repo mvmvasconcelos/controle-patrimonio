@@ -28,10 +28,12 @@ class WebBatchConferenciaPage extends StatefulWidget {
     super.key,
     required this.repository,
     this.scanBarcode,
+    this.onFeedback,
   });
 
   final WebInventoryRepository repository;
   final BarcodeScanner? scanBarcode;
+  final Future<void> Function(BatchFeedbackKind kind)? onFeedback;
 
   @override
   State<WebBatchConferenciaPage> createState() =>
@@ -49,6 +51,7 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
   bool _cameraActive = false;
   bool _cameraProcessing = false;
   String? _cameraError;
+  String? _feedbackError;
 
   bool get _cameraAvailable =>
       !kIsWeb ||
@@ -68,17 +71,20 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
     final number = raw.trim();
     if (number.isEmpty || _busy) return;
 
-    try {
-      await _feedback.prepare();
-    } catch (_) {
-      // Browser audio can be unavailable while visual feedback remains usable.
-    }
-
-    if (!mounted) return;
     setState(() {
       _busy = true;
       _cameraError = null;
     });
+
+    var feedbackReady = true;
+    try {
+      await _feedback.prepare();
+    } catch (_) {
+      feedbackReady = false;
+      _showFeedbackError();
+    }
+
+    if (!mounted) return;
 
     late final _BatchResult result;
     late final BatchFeedbackKind sound;
@@ -121,11 +127,27 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
       _number.clear();
       _busy = false;
     });
-    try {
-      await _feedback.play(sound);
-    } catch (_) {
-      // Audio feedback must not hide the API result.
+    if (feedbackReady) {
+      try {
+        final onFeedback = widget.onFeedback;
+        if (onFeedback != null) {
+          await onFeedback(sound);
+        } else {
+          await _feedback.play(sound);
+        }
+        if (mounted && _feedbackError != null) {
+          setState(() => _feedbackError = null);
+        }
+      } catch (_) {
+        _showFeedbackError();
+      }
     }
+  }
+
+  void _showFeedbackError() {
+    if (!mounted) return;
+    setState(() => _feedbackError =
+        'Feedback sonoro indisponível. O resultado continua visível na tela.');
   }
 
   Future<void> _scanOnce() async {
@@ -234,6 +256,17 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
                     style:
                         TextStyle(color: Theme.of(context).colorScheme.error),
                   ),
+                ),
+              if (_feedbackError != null)
+                MaterialBanner(
+                  content: Text(_feedbackError!),
+                  actions: [
+                    TextButton(
+                      onPressed: () =>
+                          setState(() => _feedbackError = null),
+                      child: const Text('Dispensar'),
+                    ),
+                  ],
                 ),
               const SizedBox(height: 16),
               Text(
