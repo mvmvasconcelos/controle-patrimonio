@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' show MediaType;
 
 import 'file_download.dart';
+import 'offline/sync_status.dart';
 import 'web_http_client.dart';
 
 export 'file_download.dart' show DownloadedFile;
@@ -36,6 +37,7 @@ class InventoryEntry {
     required this.status,
     this.notes,
     this.checked = false,
+    this.editApplied = true,
   });
 
   final String number;
@@ -46,6 +48,9 @@ class InventoryEntry {
   final String? notes;
   final bool checked;
 
+  /// `false` quando o servidor descartou a edição por existir outra mais recente.
+  final bool editApplied;
+
   factory InventoryEntry.fromJson(Map<String, dynamic> json) => InventoryEntry(
         number: json['numero_patrimonio'] as String,
         description: json['descricao'] as String,
@@ -54,6 +59,35 @@ class InventoryEntry {
         status: json['situacao'] as String,
         notes: json['observacoes'] as String?,
         checked: json['conferido'] as bool? ?? false,
+        editApplied: json['edicao_aplicada'] as bool? ?? true,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'numero_patrimonio': number,
+        'descricao': description,
+        'sala': room,
+        'responsavel': responsible,
+        'situacao': status,
+        'observacoes': notes,
+        'conferido': checked,
+      };
+
+  InventoryEntry copyWith({
+    String? description,
+    String? room,
+    String? responsible,
+    String? status,
+    String? notes,
+    bool? checked,
+  }) =>
+      InventoryEntry(
+        number: number,
+        description: description ?? this.description,
+        room: room ?? this.room,
+        responsible: responsible ?? this.responsible,
+        status: status ?? this.status,
+        notes: notes ?? this.notes,
+        checked: checked ?? this.checked,
       );
 }
 
@@ -173,6 +207,16 @@ class SessionExpiredException implements Exception {
   String toString() => 'Sessão expirada. Entre novamente para continuar.';
 }
 
+class ApiException implements Exception {
+  const ApiException(this.statusCode, this.message);
+
+  final int statusCode;
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class PatrimonyNotFoundException implements Exception {
   const PatrimonyNotFoundException(this.number);
 
@@ -244,6 +288,12 @@ class WebInventoryRepository {
   final http.Client _client;
   final Uri _apiBaseUrl;
   String? _csrfToken;
+
+  SyncStatus get syncStatus => const SyncStatus();
+
+  Stream<SyncStatus> get syncStatusChanges => const Stream.empty();
+
+  Future<SyncStatus> synchronize() async => syncStatus;
 
   Future<AdminSession?> restoreSession() async {
     final response = await _client.get(_uri('auth/me'));
@@ -366,10 +416,15 @@ class WebInventoryRepository {
     return InventoryEntry.fromJson(_decode(response));
   }
 
-  Future<ConferenciaResult> markChecked(String number) async {
+  Future<ConferenciaResult> markChecked(String number) =>
+      markCheckedAt(number, DateTime.now());
+
+  Future<ConferenciaResult> markCheckedAt(
+      String number, DateTime checkedAt) async {
     final response = await _client.post(
       _patrimonyUri(number, suffix: '/conferencia'),
       headers: _mutationHeaders,
+      body: jsonEncode({'editado_em': checkedAt.toUtc().toIso8601String()}),
     );
     if (response.statusCode == 404) {
       throw PatrimonyNotFoundException(number.trim());
@@ -493,7 +548,7 @@ class WebInventoryRepository {
     } on FormatException {
       // Use the generic message for non-JSON responses.
     }
-    return Exception(message);
+    return ApiException(response.statusCode, message);
   }
 
   void close() => _client.close();
