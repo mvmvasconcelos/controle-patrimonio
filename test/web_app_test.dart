@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 import 'package:controle_patrimonio/screens/web_app.dart';
+import 'package:controle_patrimonio/services/offline/sync_status.dart';
 import 'package:controle_patrimonio/services/web_inventory_repository.dart';
 
 class _FakeRepository extends WebInventoryRepository {
@@ -15,6 +17,14 @@ class _FakeRepository extends WebInventoryRepository {
   final String username;
   final String password;
   bool _loggedIn = false;
+  final statusController = StreamController<SyncStatus>.broadcast();
+  SyncStatus status = const SyncStatus();
+
+  @override
+  SyncStatus get syncStatus => status;
+
+  @override
+  Stream<SyncStatus> get syncStatusChanges => statusController.stream;
 
   @override
   Future<AdminSession?> restoreSession() async => null;
@@ -189,5 +199,27 @@ void main() {
     await tester.tap(find.text('Exportar relatório'));
     await tester.pumpAndSettle();
     expect(downloads, ['alteracoes.csv', 'relatorio.csv']);
+  });
+
+  testWidgets('connection indicator is visible and expired session returns to login',
+      (tester) async {
+    final repository = _FakeRepository('u', 'p');
+    await tester.pumpWidget(MaterialApp(home: WebApp(repository: repository)));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'u');
+    await tester.enterText(find.byType(TextField).at(1), 'p');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+    expect(find.text('Online'), findsOneWidget);
+
+    repository.statusController.add(
+        const SyncStatus(online: false, pending: 2, sessionExpired: true));
+    await tester.pumpAndSettle();
+    expect(find.text('Offline'), findsOneWidget);
+    expect(find.text('2 pendências'), findsOneWidget);
+
+    await tester.tap(find.text('Entrar novamente'));
+    await tester.pumpAndSettle();
+    expect(find.text('Acesso do Administrador'), findsOneWidget);
   });
 }

@@ -102,13 +102,16 @@ def patch_patrimonio(
 ):
     """Editar campos de um Patrimônio."""
     numero_patrimonio = numero_patrimonio.strip()
-    if not updates.model_dump(exclude_unset=True):
+    if not updates.model_dump(exclude_unset=True, exclude={"editado_em"}):
         raise HTTPException(
             status_code=400, detail="Nenhum campo para atualizar foi fornecido"
         )
-    if not crud.update_patrimonio(db, numero_patrimonio, updates):
+    applied = crud.edit_patrimonio_lww(db, numero_patrimonio, updates)
+    if applied is None:
         raise _not_found(numero_patrimonio)
-    return crud.get_patrimonio_inventario(db, numero_patrimonio)
+    item = crud.get_patrimonio_inventario(db, numero_patrimonio)
+    item["edicao_aplicada"] = applied
+    return item
 
 
 @router.post(
@@ -117,11 +120,14 @@ def patch_patrimonio(
 )
 def conferir_patrimonio(
     numero_patrimonio: str,
+    payload: Optional[schemas.ConferenciaRequest] = None,
     db: Session = Depends(get_db),
 ):
     """Registrar a Conferência de um Patrimônio (idempotente)."""
     numero_patrimonio = numero_patrimonio.strip()
-    result = crud.conferir_patrimonio(db, numero_patrimonio)
+    result = crud.conferir_patrimonio(
+        db, numero_patrimonio, payload.editado_em if payload else None
+    )
     if not result:
         raise _not_found(numero_patrimonio)
     return result

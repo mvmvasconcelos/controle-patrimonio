@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/file_download.dart';
 import '../services/web_inventory_repository.dart';
+import '../widgets/sync_status_bar.dart';
 import 'web_data_management_page.dart';
 import 'web_inventory_list.dart';
 import 'web_patrimony_pages.dart';
@@ -140,6 +141,7 @@ class _WebAppState extends State<WebApp> {
 
   Widget _buildLogin() {
     return Scaffold(
+      bottomNavigationBar: SyncStatusBar(repository: _repository),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
@@ -238,6 +240,10 @@ class _WebAppState extends State<WebApp> {
       ),
       body: Column(
         children: [
+          SyncStatusBar(
+            repository: _repository,
+            onSessionExpired: () => setState(() => _session = null),
+          ),
           if (_error != null)
             MaterialBanner(
               content: Text(_error!),

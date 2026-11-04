@@ -13,20 +13,45 @@ import 'screens/data_management_page.dart';
 import 'screens/cache_management_page.dart';
 import 'screens/inventory_list_page.dart';
 import 'screens/web_app.dart';
+import 'services/offline/offline_inventory_repository.dart';
+import 'services/offline/offline_store.dart';
+import 'services/web_inventory_repository.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  if (!kIsWeb) {
+  WebInventoryRepository? webRepository;
+  if (kIsWeb) {
+    webRepository = await _createWebRepository();
+  } else {
     await HiveDatabase.init();
     await PhotoDatabase.init();
   }
 
-  runApp(const MyApp());
+  runApp(MyApp(webRepository: webRepository));
+}
+
+/// Cache offline em IndexedDB (Hive); se o navegador negar o armazenamento
+/// (ex.: modo privativo), o app segue online-only.
+Future<WebInventoryRepository> _createWebRepository() async {
+  final remote = WebInventoryRepository();
+  try {
+    await Hive.initFlutter();
+    return await OfflineInventoryRepository.create(
+      remote: remote,
+      store: await HiveOfflineStore.open(),
+    );
+  } catch (error) {
+    debugPrint('Cache offline indisponível: $error');
+    return remote;
+  }
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super.key, this.webRepository});
+
+  final WebInventoryRepository? webRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +62,7 @@ class MyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
           useMaterial3: true,
         ),
-        home: const WebApp(),
+        home: WebApp(repository: webRepository),
       );
     }
 
