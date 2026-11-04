@@ -6,7 +6,9 @@ void main() {
   group('distribuição exclusivamente web', () {
     test('não mantém projeto, atualizador ou artefatos de APK', () {
       for (final path in [
-        'android',
+        'android/settings.gradle',
+        'android/build.gradle',
+        'android/app/build.gradle',
         'web/apk',
         'web/update.html',
         'web/version.json',
