@@ -9,6 +9,7 @@ from typing import Optional
 import pandas as pd
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
 from . import models
 
@@ -146,12 +147,15 @@ def _apply_rows(db: Session, rows: list[dict], result: ImportResult) -> None:
             db.add(models.Patrimonio(**row, observacoes=""))
             result.novos += 1
             continue
+        previous_updated_at = item.updated_at
         changed = False
         for name in UPDATABLE_FIELDS:
             if getattr(item, name) != row[name]:
                 setattr(item, name, row[name])
                 changed = True
         if changed:
+            item.updated_at = previous_updated_at
+            flag_modified(item, "updated_at")
             result.atualizados += 1
         else:
             result.inalterados += 1
@@ -214,7 +218,17 @@ def _report_rows(db: Session, only_changed: bool) -> list[list]:
     rows = []
     for item in db.query(models.Patrimonio).order_by(models.Patrimonio.numero_patrimonio):
         number = item.numero_patrimonio
-        if only_changed and number not in conferidos and not fotos.get(number):
+        edited = (
+            item.updated_at is not None
+            and item.created_at is not None
+            and item.updated_at > item.created_at
+        )
+        if (
+            only_changed
+            and number not in conferidos
+            and not fotos.get(number)
+            and not edited
+        ):
             continue
         rows.append(
             [
@@ -232,7 +246,7 @@ def _report_rows(db: Session, only_changed: bool) -> list[list]:
 
 
 def export_changes_csv(db: Session) -> bytes:
-    """Patrimônios com Conferência ou fotos registradas."""
+    """Patrimônios editados, conferidos ou com fotos registradas."""
     return _to_csv(REPORT_HEADERS, _report_rows(db, only_changed=True))
 
 

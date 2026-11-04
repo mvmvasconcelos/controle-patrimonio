@@ -165,13 +165,36 @@ def test_export_changes_downloads_conferidos_and_photographed_items(client):
         db.add(Conferencia(numero_patrimonio="1"))
         db.add(FotoPatrimonio(numero_patrimonio="2", imagem_blob=b"x"))
         db.commit()
+    updated = client.post(
+        "/api/v1/patrimonio/update",
+        json={
+            "numero_patrimonio": "3",
+            "updates": {"descricao": "Quadro revisado"},
+        },
+        headers=client.csrf,
+    )
+    assert updated.status_code == 200
 
     response = client.get(CHANGES_URL)
     assert response.status_code == 200
     assert "attachment" in response.headers["content-disposition"]
     assert ".csv" in response.headers["content-disposition"]
     frame = pd.read_csv(io.BytesIO(response.content), dtype=str, encoding="utf-8-sig")
-    assert sorted(frame["numero_patrimonio"]) == ["1", "2"]
+    assert sorted(frame["numero_patrimonio"]) == ["1", "2", "3"]
+
+
+def test_reimport_does_not_mark_imported_changes_as_field_edits(client):
+    upload(client, "inv.csv", csv_bytes("1,Mesa,S1,Ana,Ativo"))
+
+    response = upload(client, "inv.csv", csv_bytes("1,Mesa atualizada,S2,Ana,Ativo"))
+    assert response.status_code == 200
+    with db_session(client) as db:
+        item = db.query(Patrimonio).filter_by(numero_patrimonio="1").one()
+        assert item.updated_at == item.created_at
+    changes = client.get(CHANGES_URL)
+    frame = pd.read_csv(io.BytesIO(changes.content), dtype=str, encoding="utf-8-sig")
+
+    assert frame.empty
 
 
 def test_export_report_lists_all_items_and_neutralizes_formulas(client):

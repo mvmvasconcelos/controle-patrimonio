@@ -69,11 +69,11 @@ class _FakeRepository extends WebInventoryRepository {
 
   @override
   Future<DownloadedFile> exportChanges() async =>
-      DownloadedFile('alteracoes.csv', const [1]);
+      const DownloadedFile('alteracoes.csv', [1]);
 
   @override
   Future<DownloadedFile> exportReport() async =>
-      DownloadedFile('relatorio.csv', const [2]);
+      const DownloadedFile('relatorio.csv', [2]);
 }
 
 String _randomValue() {
@@ -120,7 +120,8 @@ void main() {
       MaterialApp(
         home: WebApp(
           repository: repository,
-          pickInventoryFile: () async => PickedInventoryFile('inv.csv', const [1]),
+          pickInventoryFile: () async =>
+              const PickedInventoryFile('inv.csv', [1]),
           saveDownload: (file) async => downloads.add(file.filename),
         ),
       ),
