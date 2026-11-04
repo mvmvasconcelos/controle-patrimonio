@@ -2,7 +2,10 @@
 
 ## Descrição do Sistema
 
-O Sistema de Controle Patrimonial é uma ferramenta focada na **eficiência do trabalho de campo**, desenvolvida em Flutter (Android) com um backend local de suporte (FastAPI + SQLite). O objetivo primário é substituir o processo manual de conferência com planilhas impressas, otimizando a coleta de dados e a posterior atualização no sistema SUAP.
+O Sistema de Controle Patrimonial é uma aplicação Flutter Web focada na
+**eficiência do trabalho de campo**, com backend FastAPI + SQLite. O objetivo
+primário é substituir o processo manual de conferência com planilhas impressas,
+otimizando a coleta de dados e a posterior atualização no sistema SUAP.
 
 O app funcionará como uma "prancheta digital", permitindo ao usuário escanear itens de forma individual ou em lote, identificar rapidamente inconsistências de localização, editar informações e registrar novos itens não catalogados. A funcionalidade mais importante é a geração de um relatório final, em formato de planilha, que consolida **apenas os itens que sofreram alterações**, destacando as células modificadas para facilitar e agilizar a etapa de atualização manual no SUAP.
 
@@ -110,7 +113,6 @@ No estado atual do projeto, o fluxo **offline por planilha** permanece como prio
     -   [x] **7.1.2.** Mapeamento automático de colunas SUAP → modelo interno
     -   [x] **7.1.3.** Preservação de todos os dados brutos originais para exportação fiel
     -   [x] **7.1.4.** Aviso ao sobrescrever dados com modificações pendentes
-    -   [x] **7.1.5.** App aparece no menu "Abrir com" / "Compartilhar" do Android para arquivos SUAP
 
 -   [x] **7.2. Listagem do Inventário**
     -   [x] **7.2.1.** Tela de listagem completa com busca por nº, descrição, sala e responsável
