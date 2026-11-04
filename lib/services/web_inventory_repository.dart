@@ -116,6 +116,56 @@ class InventoryFilters {
   final List<String> statuses;
 }
 
+class ConferenceReport {
+  const ConferenceReport({
+    required this.total,
+    required this.checked,
+    required this.pending,
+    required this.groups,
+  });
+
+  final int total;
+  final int checked;
+  final int pending;
+  final List<ConferenceReportGroup> groups;
+
+  factory ConferenceReport.fromJson(Map<String, dynamic> json) =>
+      ConferenceReport(
+        total: json['total'] as int,
+        checked: json['conferidos'] as int,
+        pending: json['pendentes'] as int,
+        groups: (json['grupos'] as List<dynamic>)
+            .map((group) =>
+                ConferenceReportGroup.fromJson(group as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+class ConferenceReportGroup {
+  const ConferenceReportGroup({
+    required this.room,
+    required this.situation,
+    required this.total,
+    required this.checked,
+    required this.pending,
+  });
+
+  final String room;
+  final String situation;
+  final int total;
+  final int checked;
+  final int pending;
+
+  factory ConferenceReportGroup.fromJson(Map<String, dynamic> json) =>
+      ConferenceReportGroup(
+        room: json['sala'] as String,
+        situation: json['situacao'] as String,
+        total: json['total'] as int,
+        checked: json['conferidos'] as int,
+        pending: json['pendentes'] as int,
+      );
+}
+
 class SessionExpiredException implements Exception {
   const SessionExpiredException();
 
@@ -270,6 +320,21 @@ class WebInventoryRepository {
       rooms: (body['salas'] as List<dynamic>).cast<String>(),
       statuses: (body['situacoes'] as List<dynamic>).cast<String>(),
     );
+  }
+
+  Future<ConferenceReport> fetchConferenceReport({
+    String? room,
+    String? situation,
+  }) async {
+    final params = <String, String>{
+      if (room != null && room.isNotEmpty) 'sala': room,
+      if (situation != null && situation.isNotEmpty) 'situacao': situation,
+    };
+    final uri = _uri('patrimonio/relatorio/conferencia')
+        .replace(queryParameters: params);
+    final response = await _client.get(uri);
+    _ensureData(response);
+    return ConferenceReport.fromJson(_decode(response));
   }
 
   Future<InventoryEntry?> fetchEntry(String number) async {

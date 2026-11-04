@@ -76,6 +76,21 @@ class InventarioFiltrosResponse(BaseModel):
     situacoes: list[str]
 
 
+class ConferenciaRelatorioGrupo(BaseModel):
+    sala: str
+    situacao: str
+    total: int
+    conferidos: int
+    pendentes: int
+
+
+class ConferenciaRelatorioResponse(BaseModel):
+    total: int
+    conferidos: int
+    pendentes: int
+    grupos: list[ConferenciaRelatorioGrupo]
+
+
 class ConferenciaResponse(BaseModel):
     numero_patrimonio: str
     conferido_em: datetime

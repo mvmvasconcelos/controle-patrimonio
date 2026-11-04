@@ -62,6 +62,19 @@ def get_filtros(db: Session = Depends(get_db)):
 
 
 @router.get(
+    "/patrimonio/relatorio/conferencia",
+    response_model=schemas.ConferenciaRelatorioResponse,
+)
+def get_conferencia_report(
+    sala: Optional[str] = Query(None, description="Filtrar por sala"),
+    situacao: Optional[str] = Query(None, description="Filtrar por situação patrimonial"),
+    db: Session = Depends(get_db),
+):
+    """Relatório agregado de Conferências por sala e situação patrimonial."""
+    return crud.get_conferencia_report(db, sala=sala, situacao=situacao)
+
+
+@router.get(
     "/patrimonio/{numero_patrimonio}",
     response_model=schemas.PatrimonioInventarioResponse,
 )

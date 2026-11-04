@@ -66,6 +66,7 @@ def test_requires_auth_and_csrf_for_new_endpoints(client):
     client.cookies.clear()
     assert client.get(LIST_URL).status_code == 401
     assert client.get(f"{LIST_URL}/filtros").status_code == 401
+    assert client.get(f"{LIST_URL}/relatorio/conferencia").status_code == 401
     assert client.post(f"{LIST_URL}/1000/conferencia", headers=client.csrf).status_code == 401
 
 
@@ -115,6 +116,82 @@ def test_filters_lists_rooms_and_statuses(client):
     seed(client)
     body = client.get(f"{LIST_URL}/filtros").json()
     assert body == {"salas": ["Sala A", "Sala B"], "situacoes": ["Ativo", "Baixado"]}
+
+
+def test_conferencia_report_aggregates_room_situation_and_check_state(client):
+    seed(client)
+    client.post(f"{LIST_URL}/1000/conferencia", headers=client.csrf)
+    client.post(f"{LIST_URL}/1004/conferencia", headers=client.csrf)
+
+    response = client.get(f"{LIST_URL}/relatorio/conferencia")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "total": 5,
+        "conferidos": 2,
+        "pendentes": 3,
+        "grupos": [
+            {
+                "sala": "Sala A",
+                "situacao": "Ativo",
+                "total": 3,
+                "conferidos": 1,
+                "pendentes": 2,
+            },
+            {
+                "sala": "Sala B",
+                "situacao": "Ativo",
+                "total": 1,
+                "conferidos": 0,
+                "pendentes": 1,
+            },
+            {
+                "sala": "Sala B",
+                "situacao": "Baixado",
+                "total": 1,
+                "conferidos": 1,
+                "pendentes": 0,
+            },
+        ],
+    }
+
+
+def test_conferencia_report_filters_on_server_without_changing_grouping(client):
+    seed(client)
+    client.post(f"{LIST_URL}/1004/conferencia", headers=client.csrf)
+
+    response = client.get(
+        f"{LIST_URL}/relatorio/conferencia",
+        params={"sala": "Sala B", "situacao": "Ativo"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "total": 1,
+        "conferidos": 0,
+        "pendentes": 1,
+        "grupos": [
+            {
+                "sala": "Sala B",
+                "situacao": "Ativo",
+                "total": 1,
+                "conferidos": 0,
+                "pendentes": 1,
+            },
+        ],
+    }
+
+
+def test_conferencia_report_is_empty_when_inventory_has_no_patrimonios(client):
+    response = client.get(f"{LIST_URL}/relatorio/conferencia")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "total": 0,
+        "conferidos": 0,
+        "pendentes": 0,
+        "grupos": [],
+    }
 
 
 def test_conferencia_is_idempotent_and_uses_conferencia_table(client):
