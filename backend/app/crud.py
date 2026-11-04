@@ -1,8 +1,9 @@
 """
 Operações CRUD para o banco de dados
 """
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import case, func
 from typing import Optional, List
 from . import models, schemas
 
@@ -20,39 +21,214 @@ def get_patrimonios(
     limit: Optional[int] = None,
     sala: Optional[str] = None,
     responsavel: Optional[str] = None,
-    situacao: Optional[str] = None
-) -> tuple[List[models.Patrimonio], int]:
+    situacao: Optional[str] = None,
+    q: Optional[str] = None,
+    conferido: Optional[bool] = None,
+) -> tuple[list[dict], int]:
     """
-    Buscar patrimônios com filtros opcionais
-    Retorna tupla (items, total)
+    Buscar patrimônios com filtros opcionais, em ordem estável por número.
+    Retorna tupla (items, total); cada item inclui o estado de Conferência.
     """
-    query = db.query(models.Patrimonio)
-    
-    # Aplicar filtros
+    query = db.query(
+        models.Patrimonio,
+        models.Conferencia.conferido_em,
+        models.PatrimonioEdicao.editado_em,
+    ).outerjoin(
+        models.Conferencia,
+        models.Conferencia.numero_patrimonio == models.Patrimonio.numero_patrimonio,
+    ).outerjoin(
+        models.PatrimonioEdicao,
+        models.PatrimonioEdicao.numero_patrimonio
+        == models.Patrimonio.numero_patrimonio,
+    )
+
+    if q and q.strip():
+        escaped = (
+            q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        )
+        pattern = f"%{escaped}%"
+        query = query.filter(
+            models.Patrimonio.numero_patrimonio.ilike(pattern, escape="\\")
+            | models.Patrimonio.descricao.ilike(pattern, escape="\\")
+        )
+    if conferido is True:
+        query = query.filter(models.Conferencia.id.isnot(None))
+    elif conferido is False:
+        query = query.filter(models.Conferencia.id.is_(None))
     if sala:
         query = query.filter(models.Patrimonio.sala == sala)
     if responsavel:
         query = query.filter(models.Patrimonio.responsavel == responsavel)
     if situacao:
         query = query.filter(models.Patrimonio.situacao == situacao)
-    
-    # Contar total
+
     total = query.count()
-    
-    # Aplicar paginação
-    query = query.offset(skip)
+
+    query = query.order_by(
+        models.Patrimonio.numero_patrimonio, models.Patrimonio.id
+    ).offset(skip)
     if limit:
         query = query.limit(limit)
-    
-    items = query.all()
-    
+
+    items = [
+        _with_conferencia(item, conferido_em, editado_em)
+        for item, conferido_em, editado_em in query.all()
+    ]
+
     return items, total
 
 
+def _with_conferencia(item: models.Patrimonio, conferido_em, editado_em=None) -> dict:
+    data = schemas.PatrimonioResponse.model_validate(item).model_dump()
+    data["conferido"] = conferido_em is not None
+    data["conferido_em"] = conferido_em
+    data["editado_em"] = editado_em
+    return data
+
+
+MAX_CLOCK_SKEW = timedelta(minutes=5)
+
+
+def normalize_client_time(value: Optional[datetime]) -> datetime:
+    """UTC aware; ausente ou adiantado além da tolerância vira o horário do servidor."""
+    now = datetime.now(timezone.utc)
+    if value is None:
+        return now
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    value = value.astimezone(timezone.utc)
+    return now if value > now + MAX_CLOCK_SKEW else value
+
+
+def _as_utc(value: datetime) -> datetime:
+    return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+
+def get_editado_em(db: Session, numero_patrimonio: str):
+    return (
+        db.query(models.PatrimonioEdicao.editado_em)
+        .filter(models.PatrimonioEdicao.numero_patrimonio == numero_patrimonio)
+        .scalar()
+    )
+
+
+def get_conferido_em(db: Session, numero_patrimonio: str):
+    return (
+        db.query(models.Conferencia.conferido_em)
+        .filter(models.Conferencia.numero_patrimonio == numero_patrimonio)
+        .scalar()
+    )
+
+
+def get_patrimonio_inventario(db: Session, numero_patrimonio: str) -> Optional[dict]:
+    item = get_patrimonio_by_numero(db, numero_patrimonio)
+    if not item:
+        return None
+    return _with_conferencia(
+        item,
+        get_conferido_em(db, numero_patrimonio),
+        get_editado_em(db, numero_patrimonio),
+    )
+
+
+def get_filtros(db: Session) -> dict:
+    def distinct(column):
+        return [
+            value
+            for (value,) in db.query(column).distinct().order_by(column)
+            if value
+        ]
+
+    return {
+        "salas": distinct(models.Patrimonio.sala),
+        "situacoes": distinct(models.Patrimonio.situacao),
+    }
+
+
+def get_conferencia_report(
+    db: Session,
+    sala: Optional[str] = None,
+    situacao: Optional[str] = None,
+) -> dict:
+    """Agrega o estado da Conferência por sala e situação patrimonial."""
+    conferido = case((models.Conferencia.id.isnot(None), 1), else_=0)
+    pendente = case((models.Conferencia.id.is_(None), 1), else_=0)
+    query = (
+        db.query(
+            models.Patrimonio.sala.label("sala"),
+            models.Patrimonio.situacao.label("situacao"),
+            func.count(models.Patrimonio.id).label("total"),
+            func.sum(conferido).label("conferidos"),
+            func.sum(pendente).label("pendentes"),
+        )
+        .outerjoin(
+            models.Conferencia,
+            models.Conferencia.numero_patrimonio == models.Patrimonio.numero_patrimonio,
+        )
+    )
+    if sala:
+        query = query.filter(models.Patrimonio.sala == sala)
+    if situacao:
+        query = query.filter(models.Patrimonio.situacao == situacao)
+
+    rows = query.group_by(
+        models.Patrimonio.sala,
+        models.Patrimonio.situacao,
+    ).order_by(
+        models.Patrimonio.sala,
+        models.Patrimonio.situacao,
+    ).all()
+    groups = [
+        {
+            "sala": row.sala,
+            "situacao": row.situacao,
+            "total": int(row.total),
+            "conferidos": int(row.conferidos or 0),
+            "pendentes": int(row.pendentes or 0),
+        }
+        for row in rows
+    ]
+    return {
+        "total": sum(group["total"] for group in groups),
+        "conferidos": sum(group["conferidos"] for group in groups),
+        "pendentes": sum(group["pendentes"] for group in groups),
+        "grupos": groups,
+    }
+
+
+def conferir_patrimonio(
+    db: Session, numero_patrimonio: str, conferido_em_cliente: Optional[datetime] = None
+) -> Optional[dict]:
+    """Registra a Conferência de forma idempotente; None se o Patrimônio não existe.
+
+    O primeiro horário registrado é mantido; reenvios da fila offline não o alteram."""
+    if not get_patrimonio_by_numero(db, numero_patrimonio):
+        return None
+    conferido_em = get_conferido_em(db, numero_patrimonio)
+    repetida = conferido_em is not None
+    if conferido_em is None:
+        db.add(
+            models.Conferencia(
+                numero_patrimonio=numero_patrimonio,
+                conferido_em=normalize_client_time(conferido_em_cliente),
+            )
+        )
+        db.commit()
+        conferido_em = get_conferido_em(db, numero_patrimonio)
+    return {
+        "numero_patrimonio": numero_patrimonio,
+        "conferido_em": conferido_em,
+        "repetida": repetida,
+    }
+
+
 def create_patrimonio(db: Session, patrimonio: schemas.PatrimonioCreate) -> models.Patrimonio:
-    """Criar novo patrimônio"""
-    db_patrimonio = models.Patrimonio(**patrimonio.model_dump())
+    """Criar um Patrimônio e, quando solicitado, sua Conferência atomicamente."""
+    data = patrimonio.model_dump(exclude={"conferido"})
+    db_patrimonio = models.Patrimonio(**data)
     db.add(db_patrimonio)
+    if patrimonio.conferido:
+        db.add(models.Conferencia(numero_patrimonio=patrimonio.numero_patrimonio))
     db.commit()
     db.refresh(db_patrimonio)
     return db_patrimonio
@@ -73,13 +249,52 @@ def update_patrimonio(
         return None
     
     # Atualizar apenas campos fornecidos
-    update_data = updates.model_dump(exclude_unset=True)
+    update_data = updates.model_dump(exclude_unset=True, exclude={"editado_em"})
+    changed = False
     for field, value in update_data.items():
-        setattr(db_patrimonio, field, value)
-    
+        if getattr(db_patrimonio, field) != value:
+            setattr(db_patrimonio, field, value)
+            changed = True
+
+    if not changed:
+        return db_patrimonio
+
     db.commit()
     db.refresh(db_patrimonio)
     return db_patrimonio
+
+
+def edit_patrimonio_lww(
+    db: Session, numero_patrimonio: str, updates: schemas.PatrimonioUpdate
+) -> Optional[bool]:
+    """Edita com last-write-wins por Patrimônio.
+
+    None se não existe; False se a edição é mais antiga que a já aplicada e foi descartada."""
+    if not get_patrimonio_by_numero(db, numero_patrimonio):
+        return None
+    editado_em = normalize_client_time(updates.editado_em)
+    edicao = (
+        db.query(models.PatrimonioEdicao)
+        .filter(models.PatrimonioEdicao.numero_patrimonio == numero_patrimonio)
+        .first()
+    )
+    if edicao is not None and editado_em < _as_utc(edicao.editado_em):
+        return False
+    patrimonio = get_patrimonio_by_numero(db, numero_patrimonio)
+    update_data = updates.model_dump(exclude_unset=True, exclude={"editado_em"})
+    for field, value in update_data.items():
+        setattr(patrimonio, field, value)
+    if edicao is None:
+        db.add(
+            models.PatrimonioEdicao(
+                numero_patrimonio=numero_patrimonio, editado_em=editado_em
+            )
+        )
+    else:
+        edicao.editado_em = editado_em
+    db.commit()
+    db.refresh(patrimonio)
+    return True
 
 
 def delete_patrimonio(db: Session, numero_patrimonio: str) -> bool:

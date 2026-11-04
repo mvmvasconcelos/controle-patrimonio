@@ -150,11 +150,9 @@ show_next_steps() {
   echo ""
   log_info "📋 Próximos passos disponíveis:"
   echo "   ./start.sh               - Gerenciar container Docker"
-  echo "   ./compila.sh             - Compilar APK (incrementa versionCode)"
-  echo "   ./compila.sh patch       - Compilar com versao patch"
-  echo "   ./compila.sh minor       - Compilar com versao minor"
-  echo "   ./compila.sh major       - Compilar com versao major"
-  echo "   ./share.sh               - Compartilhar APK via servidor HTTP"
+  echo "   docker-compose run --rm flutter sh -lc 'flutter analyze'"
+  echo "   docker-compose run --rm flutter sh -lc 'flutter test'"
+  echo "   docker-compose run --rm flutter sh -lc 'flutter build web'"
   echo ""
 }
 

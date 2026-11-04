@@ -2,47 +2,24 @@ version: '3.8'
 
 services:
   flutter:
-    build: .
+    build:
+      context: .
+      target: flutter-sdk
     container_name: controle-patrimonio-flutter
     working_dir: /app
     volumes:
       - ./:/app:cached
-      - gradle_cache:/root/.gradle
       - pub_cache:/root/.pub-cache
-      - android_sdk:/opt/android-sdk
     ports:
       - "8092:8090"
     environment:
       TERM: xterm
-      ANDROID_HOME: /opt/android-sdk
     stdin_open: true
     tty: true
     # Manter container vivo para execução de comandos
     command: ["sh", "-c", "tail -f /dev/null"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-  builder:
-    build: .
-    container_name: controle-patrimonio-builder
-    working_dir: /app
-    volumes:
-      - ./:/app:cached
-      - gradle_cache:/root/.gradle
-      - pub_cache:/root/.pub-cache
-      - android_sdk:/opt/android-sdk
-    ports:
-      - "8090:8090"
-    environment:
-      TERM: xterm
-      ANDROID_HOME: /opt/android-sdk
-    stdin_open: true
-    tty: true
-    command: ["sh", "-c", "tail -f /dev/null"]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-
 
   backend:
     build: ./backend
@@ -55,10 +32,23 @@ services:
       - "6090:8000"
     environment:
       PYTHONUNBUFFERED: 1
+      ADMIN_USER: ${ADMIN_USER:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+    ports:
+      - "8090:80"
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
-  gradle_cache:
   pub_cache:
-  android_sdk:
   backend_data:

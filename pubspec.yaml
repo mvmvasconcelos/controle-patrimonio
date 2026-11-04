@@ -8,54 +8,27 @@ dependencies:
   flutter:
     sdk: flutter
   
-  # State management
-  provider: ^6.0.5
-  
   # Network & HTTP
   http: ^1.2.0
-  dio: ^5.9.0
+  http_parser: ^4.0.2
   connectivity_plus: ^6.0.0
   
-  # Device info & storage
-  package_info_plus: ^8.0.0
-  shared_preferences: ^2.3.0
-  path_provider: ^2.1.1
-  path: ^1.9.0
-  
-  # Local database
+  # Browser offline storage
   hive: ^2.2.3
   hive_flutter: ^1.1.0
-  sqflite: ^2.3.0
   
-  # Barcode scanner
+  # Browser camera and file handling
   mobile_scanner: ^5.0.0
   audioplayers: ^6.0.0
-  
-  # File handling & installation
-  open_filex: ^4.3.4
-  permission_handler: ^12.0.0
   image_picker: ^1.1.0
-  flutter_image_compress: ^2.2.0
-  photo_view: ^0.15.0
-  excel: ^4.0.6
-  spreadsheet_decoder: ^2.2.0
   file_picker: ^8.0.0
-  csv: ^6.0.0
   
-  # Utilities
-  intl: ^0.18.1
-  yaml: ^3.1.2
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  hive_test: ^1.0.0
 
 dependency_overrides:
-  # flutter_plugin_android_lifecycle 2.0.19 tem incompatibilidade com AGP 8.x
-  # Força a versão mais recente que resolve o erro de compilação Java
-  flutter_plugin_android_lifecycle: ^2.0.31
   # win32 5.5.0 usa UnmodifiableUint8ListView removido no Dart 3.3+
   # win32 5.13.0 corrigiu o problema mantendo compatibilidade com meta 1.16.0
   win32: ^5.13.0

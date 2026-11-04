@@ -1,8 +1,8 @@
 """
 Schemas Pydantic para validação de dados
 """
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel, Field, field_validator
+from typing import List, Optional
 from datetime import datetime
 
 
@@ -19,7 +19,17 @@ class PatrimonioBase(BaseModel):
 
 class PatrimonioCreate(PatrimonioBase):
     """Schema para criação de novo patrimônio"""
-    pass
+    conferido: bool = False
+
+    @field_validator(
+        "numero_patrimonio", "descricao", "sala", "responsavel", "situacao"
+    )
+    @classmethod
+    def _required_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Campo obrigatório")
+        return value
 
 
 class PatrimonioUpdate(BaseModel):
@@ -30,6 +40,16 @@ class PatrimonioUpdate(BaseModel):
     situacao: Optional[str] = None
     observacoes: Optional[str] = None
     foto_url: Optional[str] = None
+    editado_em: Optional[datetime] = Field(
+        None, description="Horário da edição no cliente (last-write-wins)"
+    )
+
+    @field_validator("descricao", "sala", "responsavel", "situacao")
+    @classmethod
+    def _required_text(cls, value: Optional[str]) -> str:
+        if value is None or not value.strip():
+            raise ValueError("Campo obrigatório")
+        return value.strip()
 
 
 class PatrimonioResponse(PatrimonioBase):
@@ -42,10 +62,50 @@ class PatrimonioResponse(PatrimonioBase):
         from_attributes = True
 
 
+class PatrimonioInventarioResponse(PatrimonioResponse):
+    """Patrimônio com o estado de Conferência"""
+    conferido: bool = False
+    conferido_em: Optional[datetime] = None
+    editado_em: Optional[datetime] = None
+    edicao_aplicada: bool = True
+
+
 class PatrimonioListResponse(BaseModel):
     """Schema para resposta de lista de patrimônios"""
     total: int
-    items: list[PatrimonioResponse]
+    items: list[PatrimonioInventarioResponse]
+
+
+class InventarioFiltrosResponse(BaseModel):
+    salas: list[str]
+    situacoes: list[str]
+
+
+class ConferenciaRelatorioGrupo(BaseModel):
+    sala: str
+    situacao: str
+    total: int
+    conferidos: int
+    pendentes: int
+
+
+class ConferenciaRelatorioResponse(BaseModel):
+    total: int
+    conferidos: int
+    pendentes: int
+    grupos: list[ConferenciaRelatorioGrupo]
+
+
+class ConferenciaRequest(BaseModel):
+    editado_em: Optional[datetime] = Field(
+        None, description="Horário da Conferência no cliente"
+    )
+
+
+class ConferenciaResponse(BaseModel):
+    numero_patrimonio: str
+    conferido_em: datetime
+    repetida: bool
 
 
 class PatrimonioUpdateRequest(BaseModel):
@@ -85,3 +145,15 @@ class FotoPatrimonioListResponse(BaseModel):
 
     total: int
     items: list[FotoPatrimonioMetadata]
+
+
+class InventarioImportErro(BaseModel):
+    linha: int
+    mensagem: str
+
+
+class InventarioImportResponse(BaseModel):
+    novos: int
+    atualizados: int
+    inalterados: int
+    erros: List[InventarioImportErro]

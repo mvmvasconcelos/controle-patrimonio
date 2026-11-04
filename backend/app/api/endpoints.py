@@ -2,48 +2,82 @@
 Endpoints da API REST
 """
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from typing import Optional
 from .. import crud, schemas
 from ..database import get_db
+from .auth import current_admin, require_csrf
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(current_admin), Depends(require_csrf)])
+
+MAX_PAGE_SIZE = 200
+DEFAULT_PAGE_SIZE = 50
+MAX_FOTO_BYTES = 5 * 1024 * 1024
+JPEG_MAGIC = b"\xff\xd8\xff"
+
+
+def _not_found(numero_patrimonio: str) -> HTTPException:
+    return HTTPException(
+        status_code=404,
+        detail=f"Patrimônio {numero_patrimonio} não encontrado",
+    )
 
 
 @router.get("/patrimonio", response_model=schemas.PatrimonioListResponse)
 def list_patrimonios(
+    q: Optional[str] = Query(None, description="Busca por número ou descrição"),
     sala: Optional[str] = Query(None, description="Filtrar por sala"),
     responsavel: Optional[str] = Query(None, description="Filtrar por responsável"),
     situacao: Optional[str] = Query(None, description="Filtrar por situação"),
+    conferido: Optional[bool] = Query(None, description="Filtrar por conferido ou não"),
     offset: int = Query(0, ge=0, description="Número de itens para pular"),
-    limit: Optional[int] = Query(None, ge=1, description="Número máximo de itens a retornar"),
+    limit: int = Query(
+        DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE, description="Itens por página"
+    ),
     db: Session = Depends(get_db)
 ):
-    """
-    Listar patrimônios com filtros opcionais
-    
-    - **sala**: Filtrar por sala específica
-    - **responsavel**: Filtrar por responsável
-    - **situacao**: Filtrar por situação (Ativo, Baixado, etc)
-    - **offset**: Paginação - número de itens para pular
-    - **limit**: Paginação - máximo de itens a retornar
-    """
+    """Listar o Inventário com busca, filtros e paginação estável por número."""
     items, total = crud.get_patrimonios(
         db=db,
         skip=offset,
         limit=limit,
         sala=sala,
         responsavel=responsavel,
-        situacao=situacao
+        situacao=situacao,
+        q=q,
+        conferido=conferido,
     )
-    
+
     return schemas.PatrimonioListResponse(
         total=total,
         items=items
     )
 
 
-@router.get("/patrimonio/{numero_patrimonio}", response_model=schemas.PatrimonioResponse)
+@router.get("/patrimonio/filtros", response_model=schemas.InventarioFiltrosResponse)
+def get_filtros(db: Session = Depends(get_db)):
+    """Salas e situações existentes, para os filtros da lista."""
+    return crud.get_filtros(db)
+
+
+@router.get(
+    "/patrimonio/relatorio/conferencia",
+    response_model=schemas.ConferenciaRelatorioResponse,
+)
+def get_conferencia_report(
+    sala: Optional[str] = Query(None, description="Filtrar por sala"),
+    situacao: Optional[str] = Query(None, description="Filtrar por situação patrimonial"),
+    db: Session = Depends(get_db),
+):
+    """Relatório agregado de Conferências por sala e situação patrimonial."""
+    return crud.get_conferencia_report(db, sala=sala, situacao=situacao)
+
+
+@router.get(
+    "/patrimonio/{numero_patrimonio}",
+    response_model=schemas.PatrimonioInventarioResponse,
+)
 def get_patrimonio(
     numero_patrimonio: str,
     db: Session = Depends(get_db)
@@ -51,13 +85,52 @@ def get_patrimonio(
     """
     Buscar patrimônio específico por número
     """
-    db_patrimonio = crud.get_patrimonio_by_numero(db, numero_patrimonio)
-    if not db_patrimonio:
+    item = crud.get_patrimonio_inventario(db, numero_patrimonio.strip())
+    if not item:
+        raise _not_found(numero_patrimonio)
+    return item
+
+
+@router.patch(
+    "/patrimonio/{numero_patrimonio}",
+    response_model=schemas.PatrimonioInventarioResponse,
+)
+def patch_patrimonio(
+    numero_patrimonio: str,
+    updates: schemas.PatrimonioUpdate,
+    db: Session = Depends(get_db),
+):
+    """Editar campos de um Patrimônio."""
+    numero_patrimonio = numero_patrimonio.strip()
+    if not updates.model_dump(exclude_unset=True, exclude={"editado_em"}):
         raise HTTPException(
-            status_code=404,
-            detail=f"Patrimônio {numero_patrimonio} não encontrado"
+            status_code=400, detail="Nenhum campo para atualizar foi fornecido"
         )
-    return db_patrimonio
+    applied = crud.edit_patrimonio_lww(db, numero_patrimonio, updates)
+    if applied is None:
+        raise _not_found(numero_patrimonio)
+    item = crud.get_patrimonio_inventario(db, numero_patrimonio)
+    item["edicao_aplicada"] = applied
+    return item
+
+
+@router.post(
+    "/patrimonio/{numero_patrimonio}/conferencia",
+    response_model=schemas.ConferenciaResponse,
+)
+def conferir_patrimonio(
+    numero_patrimonio: str,
+    payload: Optional[schemas.ConferenciaRequest] = None,
+    db: Session = Depends(get_db),
+):
+    """Registrar a Conferência de um Patrimônio (idempotente)."""
+    numero_patrimonio = numero_patrimonio.strip()
+    result = crud.conferir_patrimonio(
+        db, numero_patrimonio, payload.editado_em if payload else None
+    )
+    if not result:
+        raise _not_found(numero_patrimonio)
+    return result
 
 
 @router.post("/patrimonio/update", response_model=schemas.PatrimonioUpdateResponse)
@@ -99,23 +172,28 @@ def update_patrimonio(
     )
 
 
-@router.post("/patrimonio", response_model=schemas.PatrimonioResponse, status_code=201)
+@router.post(
+    "/patrimonio",
+    response_model=schemas.PatrimonioInventarioResponse,
+    status_code=201,
+)
 def create_patrimonio(
     patrimonio: schemas.PatrimonioCreate,
     db: Session = Depends(get_db)
 ):
-    """
-    Criar novo patrimônio (para uso do script de importação ou registro manual)
-    """
-    # Verificar se já existe
-    existing = crud.get_patrimonio_by_numero(db, patrimonio.numero_patrimonio)
-    if existing:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Patrimônio {patrimonio.numero_patrimonio} já existe"
-        )
-    
-    return crud.create_patrimonio(db=db, patrimonio=patrimonio)
+    """Registrar um Patrimônio fora do Inventário importado."""
+    duplicate = HTTPException(
+        status_code=409,
+        detail=f"Patrimônio {patrimonio.numero_patrimonio} já existe",
+    )
+    if crud.get_patrimonio_by_numero(db, patrimonio.numero_patrimonio):
+        raise duplicate
+    try:
+        crud.create_patrimonio(db=db, patrimonio=patrimonio)
+    except IntegrityError as exc:
+        db.rollback()
+        raise duplicate from exc
+    return crud.get_patrimonio_inventario(db, patrimonio.numero_patrimonio)
 
 
 @router.post(
@@ -128,10 +206,25 @@ async def upload_foto_patrimonio(
     foto: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    """Enviar foto para um patrimônio."""
-    image_bytes = await foto.read()
+    """Enviar foto JPEG (até 5 MB) para um patrimônio."""
+    if foto.content_type != "image/jpeg":
+        raise HTTPException(
+            status_code=415, detail="Formato inválido: envie uma imagem JPEG"
+        )
+    image_bytes = await foto.read(MAX_FOTO_BYTES + 1)
     if not image_bytes:
         raise HTTPException(status_code=400, detail="Arquivo de foto vazio")
+    if len(image_bytes) > MAX_FOTO_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Foto maior que o limite de {MAX_FOTO_BYTES // (1024 * 1024)} MB",
+        )
+    if not image_bytes.startswith(JPEG_MAGIC):
+        raise HTTPException(
+            status_code=415, detail="Formato inválido: o arquivo não é um JPEG"
+        )
+    if not crud.get_patrimonio_by_numero(db, numero_patrimonio):
+        raise _not_found(numero_patrimonio)
 
     try:
         return crud.create_foto_patrimonio(
@@ -153,6 +246,8 @@ def list_fotos_patrimonio(
     db: Session = Depends(get_db),
 ):
     """Listar metadados das fotos de um patrimônio."""
+    if not crud.get_patrimonio_by_numero(db, numero_patrimonio):
+        raise _not_found(numero_patrimonio)
     items = crud.get_fotos_by_numero(db, numero_patrimonio)
     return schemas.FotoPatrimonioListResponse(total=len(items), items=items)
 
@@ -168,7 +263,11 @@ def download_foto_patrimonio(
     if not foto:
         raise HTTPException(status_code=404, detail="Foto não encontrada")
 
-    return Response(content=foto.imagem_blob, media_type="image/jpeg")
+    return Response(
+        content=foto.imagem_blob,
+        media_type="image/jpeg",
+        headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 
 @router.delete(
