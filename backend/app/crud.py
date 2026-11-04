@@ -111,11 +111,16 @@ def conferir_patrimonio(db: Session, numero_patrimonio: str) -> Optional[dict]:
     if not get_patrimonio_by_numero(db, numero_patrimonio):
         return None
     conferido_em = get_conferido_em(db, numero_patrimonio)
+    repetida = conferido_em is not None
     if conferido_em is None:
         db.add(models.Conferencia(numero_patrimonio=numero_patrimonio))
         db.commit()
         conferido_em = get_conferido_em(db, numero_patrimonio)
-    return {"numero_patrimonio": numero_patrimonio, "conferido_em": conferido_em}
+    return {
+        "numero_patrimonio": numero_patrimonio,
+        "conferido_em": conferido_em,
+        "repetida": repetida,
+    }
 
 
 def create_patrimonio(db: Session, patrimonio: schemas.PatrimonioCreate) -> models.Patrimonio:

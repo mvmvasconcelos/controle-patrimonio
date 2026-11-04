@@ -124,6 +124,8 @@ def test_conferencia_is_idempotent_and_uses_conferencia_table(client):
     assert first.status_code == second.status_code == 200
     assert first.json()["numero_patrimonio"] == "1000"
     assert first.json()["conferido_em"] == second.json()["conferido_em"]
+    assert first.json()["repetida"] is False
+    assert second.json()["repetida"] is True
     with client.app_ref.state.session_factory() as db:
         assert db.query(Conferencia).filter_by(numero_patrimonio="1000").count() == 1
 
