@@ -41,7 +41,6 @@ class Usuario(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     username = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="administrador")
 
 
 class FotoPatrimonio(Base):

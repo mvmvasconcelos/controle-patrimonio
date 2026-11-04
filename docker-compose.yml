@@ -59,7 +59,7 @@ services:
       - "6090:8000"
     environment:
       PYTHONUNBUFFERED: 1
-      ADMIN_USERNAME: ${ADMIN_USERNAME:-}
+      ADMIN_USER: ${ADMIN_USER:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}

@@ -15,13 +15,13 @@ from .database import Base, SQLALCHEMY_DATABASE_URL, create_database_engine
 
 
 def create_app(database_url: str | None = None) -> FastAPI:
-    admin_username = os.getenv("ADMIN_USERNAME")
+    admin_username = os.getenv("ADMIN_USER")
     admin_password = os.getenv("ADMIN_PASSWORD")
     jwt_secret = os.getenv("JWT_SECRET_KEY")
     provided_auth_config = any((admin_username, admin_password, jwt_secret))
     if provided_auth_config and not all((admin_username, admin_password, jwt_secret)):
         raise RuntimeError(
-            "ADMIN_USERNAME, ADMIN_PASSWORD e JWT_SECRET_KEY devem ser configurados juntos"
+            "ADMIN_USER, ADMIN_PASSWORD e JWT_SECRET_KEY devem ser configurados juntos"
         )
     if jwt_secret and len(jwt_secret) < 32:
         raise RuntimeError("JWT_SECRET_KEY deve conter pelo menos 32 caracteres")

@@ -17,7 +17,7 @@ def client(monkeypatch):
     username = f"admin-{uuid4().hex}"
     password = secrets.token_urlsafe(32)
     secret = secrets.token_urlsafe(48)
-    monkeypatch.setenv("ADMIN_USERNAME", username)
+    monkeypatch.setenv("ADMIN_USER", username)
     monkeypatch.setenv("ADMIN_PASSWORD", password)
     monkeypatch.setenv("JWT_SECRET_KEY", secret)
     app = create_app(database_url="sqlite://")
@@ -121,6 +121,7 @@ def test_health_is_public_and_seeded_password_is_hashed(client):
 
     assert user.password_hash != client.admin_password
     assert user.password_hash.startswith("pbkdf2_sha256$")
+    assert "role" not in Usuario.__table__.columns
 
 
 def test_expired_session_is_rejected(client):
@@ -128,6 +129,14 @@ def test_expired_session_is_rejected(client):
         "patrimonio_session",
         expired_token(client.jwt_secret, client.admin_username),
     )
+
+    response = client.get("/api/v1/patrimonio")
+
+    assert response.status_code == 401
+
+
+def test_malformed_session_is_rejected_as_unauthorized(client):
+    client.cookies.set("patrimonio_session", "____.e30.invalid")
 
     response = client.get("/api/v1/patrimonio")
 

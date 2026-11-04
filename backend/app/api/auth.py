@@ -60,7 +60,6 @@ def seed_admin(db: Session, username: str, password: str) -> None:
             models.Usuario(
                 username=username,
                 password_hash=hash_password(password),
-                role="administrador",
             )
         )
         db.commit()
@@ -165,7 +164,7 @@ def current_admin(request: Request, db: Session = Depends(get_db)) -> models.Usu
         .filter(models.Usuario.username == payload["sub"])
         .first()
     )
-    if not user or user.role != "administrador":
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Autenticação necessária",
@@ -241,7 +240,7 @@ def login(
     )
     return {
         "username": user.username,
-        "role": user.role,
+        "role": "administrador",
         "csrf_token": csrf_token,
     }
 
@@ -257,7 +256,7 @@ def get_session(
         raise HTTPException(status_code=401, detail="Sessão inválida")
     return {
         "username": user.username,
-        "role": user.role,
+        "role": "administrador",
         "csrf_token": csrf_token,
     }
 

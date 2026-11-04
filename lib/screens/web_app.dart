@@ -96,7 +96,8 @@ class _WebAppState extends State<WebApp> {
     }
   }
 
-  String _message(Object error) => error.toString().replaceFirst('Exception: ', '');
+  String _message(Object error) =>
+      error.toString().replaceFirst('Exception: ', '');
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +160,8 @@ class _WebAppState extends State<WebApp> {
                       const SizedBox(height: 12),
                       Text(
                         _error!,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.error),
                       ),
                     ],
                     const SizedBox(height: 20),
@@ -184,7 +186,15 @@ class _WebAppState extends State<WebApp> {
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Center(child: Text(_session!.username)),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 160),
+                child: Text(
+                  _session!.username,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
           ),
           IconButton(
             tooltip: 'Sair',
