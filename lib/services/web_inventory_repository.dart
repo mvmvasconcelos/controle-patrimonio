@@ -62,6 +62,7 @@ class NewInventoryEntry {
     required this.room,
     required this.responsible,
     required this.status,
+    this.checked = false,
     this.notes,
   });
 
@@ -70,6 +71,7 @@ class NewInventoryEntry {
   final String room;
   final String responsible;
   final String status;
+  final bool checked;
   final String? notes;
 
   Map<String, dynamic> toJson() => {
@@ -78,6 +80,7 @@ class NewInventoryEntry {
         'sala': room,
         'responsavel': responsible,
         'situacao': status,
+        if (checked) 'conferido': true,
         if (notes != null && notes!.trim().isNotEmpty) 'observacoes': notes,
       };
 }
@@ -211,8 +214,8 @@ class WebInventoryRepository {
       'offset': '$offset',
       'limit': '$limit',
     };
-    final response = await _client
-        .get(_uri('patrimonio').replace(queryParameters: params));
+    final response =
+        await _client.get(_uri('patrimonio').replace(queryParameters: params));
     _ensureData(response);
     final body = _decode(response);
     return InventoryPage(

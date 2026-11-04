@@ -119,8 +119,8 @@ void main() {
   });
 
   test('updateEntry sends PATCH with CSRF and only changed fields', () async {
-    final (repository, requests) = await _logged(
-        (_) => http.Response(jsonEncode(_item('1')), 200));
+    final (repository, requests) =
+        await _logged((_) => http.Response(jsonEncode(_item('1')), 200));
     final entry = await repository.updateEntry('1', {'sala': 'Sala Z'});
     expect(entry.number, '1');
     expect(requests.single.method, 'PATCH');
@@ -129,8 +129,8 @@ void main() {
   });
 
   test('createEntry posts the new Patrimônio with CSRF', () async {
-    final (repository, requests) = await _logged(
-        (_) => http.Response(jsonEncode(_item('9')), 201));
+    final (repository, requests) =
+        await _logged((_) => http.Response(jsonEncode(_item('9')), 201));
     final entry = await repository.createEntry(const NewInventoryEntry(
       number: '9',
       description: 'Mesa 9',
@@ -145,9 +145,26 @@ void main() {
     expect(jsonDecode(requests.single.body)['numero_patrimonio'], '9');
   });
 
+  test('createEntry can atomically register an unknown scanned Patrimônio',
+      () async {
+    final (repository, requests) = await _logged(
+        (_) => http.Response(jsonEncode(_item('9', checked: true)), 201));
+    final entry = await repository.createEntry(const NewInventoryEntry(
+      number: '9',
+      description: 'Mesa 9',
+      room: 'Sala A',
+      responsible: 'Ana',
+      status: 'Ativo',
+      checked: true,
+    ));
+
+    expect(entry.checked, isTrue);
+    expect(jsonDecode(requests.single.body)['conferido'], isTrue);
+  });
+
   test('createEntry surfaces the validation/duplicate message', () async {
-    final (repository, _) = await _logged(
-        (_) => http.Response(jsonEncode({'detail': 'Patrimônio 9 já existe'}), 409));
+    final (repository, _) = await _logged((_) =>
+        http.Response(jsonEncode({'detail': 'Patrimônio 9 já existe'}), 409));
     await expectLater(
       repository.createEntry(const NewInventoryEntry(
           number: '9',
@@ -160,12 +177,12 @@ void main() {
   });
 
   test('expired session on data calls gives a clear message', () async {
-    final (repository, _) = await _logged(
-        (_) => http.Response(jsonEncode({'detail': 'Autenticação necessária'}), 401));
+    final (repository, _) = await _logged((_) =>
+        http.Response(jsonEncode({'detail': 'Autenticação necessária'}), 401));
     await expectLater(
       repository.fetchInventory(),
-      throwsA(isA<SessionExpiredException>().having(
-          (e) => e.toString(), 'message', contains('Sessão expirada'))),
+      throwsA(isA<SessionExpiredException>()
+          .having((e) => e.toString(), 'message', contains('Sessão expirada'))),
     );
     await expectLater(
         repository.markChecked('1'), throwsA(isA<SessionExpiredException>()));

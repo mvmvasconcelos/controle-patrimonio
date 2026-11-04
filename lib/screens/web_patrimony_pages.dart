@@ -174,10 +174,12 @@ class WebNewPatrimonyPage extends StatefulWidget {
     super.key,
     required this.repository,
     this.initialNumber = '',
+    this.markChecked = false,
   });
 
   final WebInventoryRepository repository;
   final String initialNumber;
+  final bool markChecked;
 
   @override
   State<WebNewPatrimonyPage> createState() => _WebNewPatrimonyPageState();
@@ -196,7 +198,14 @@ class _WebNewPatrimonyPageState extends State<WebNewPatrimonyPage> {
 
   @override
   void dispose() {
-    for (final c in [_number, _description, _room, _responsible, _status, _notes]) {
+    for (final c in [
+      _number,
+      _description,
+      _room,
+      _responsible,
+      _status,
+      _notes
+    ]) {
       c.dispose();
     }
     super.dispose();
@@ -215,6 +224,7 @@ class _WebNewPatrimonyPageState extends State<WebNewPatrimonyPage> {
         room: _room.text.trim(),
         responsible: _responsible.text.trim(),
         status: _status.text.trim(),
+        checked: widget.markChecked,
         notes: _notes.text.trim(),
       ));
       if (mounted) Navigator.of(context).pop(entry);
@@ -345,7 +355,13 @@ class _WebConferenciaPageState extends State<WebConferenciaPage> {
 
   Future<void> _scan() async {
     final scan = widget.scanBarcode ?? scanWithCamera;
-    final value = await scan(context);
+    String? value;
+    try {
+      value = await scan(context);
+    } catch (error) {
+      if (mounted) setState(() => _error = errorMessage(error));
+      return;
+    }
     if (value != null && value.trim().isNotEmpty && mounted) {
       _number.text = value.trim();
       await _confirm(value);
@@ -359,15 +375,16 @@ class _WebConferenciaPageState extends State<WebConferenciaPage> {
         builder: (_) => WebNewPatrimonyPage(
           repository: widget.repository,
           initialNumber: number,
+          markChecked: true,
         ),
       ),
     );
     if (created == null || !mounted) return;
-    await _confirm(created.number);
-    if (mounted && _error == null) {
-      setState(() => _success =
-          'Patrimônio ${created.number} cadastrado e conferido.');
-    }
+    setState(() {
+      _unknownNumber = null;
+      _success = 'Patrimônio ${created.number} cadastrado e conferido.';
+      _number.clear();
+    });
   }
 
   @override
@@ -405,8 +422,7 @@ class _WebConferenciaPageState extends State<WebConferenciaPage> {
               if (!_cameraAvailable)
                 const Padding(
                   padding: EdgeInsets.only(top: 8),
-                  child: Text(
-                      'A câmera exige HTTPS. Use a digitação manual.'),
+                  child: Text('A câmera exige HTTPS. Use a digitação manual.'),
                 ),
               const SizedBox(height: 16),
               if (_success != null)

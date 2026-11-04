@@ -119,9 +119,12 @@ def conferir_patrimonio(db: Session, numero_patrimonio: str) -> Optional[dict]:
 
 
 def create_patrimonio(db: Session, patrimonio: schemas.PatrimonioCreate) -> models.Patrimonio:
-    """Criar novo patrimônio"""
-    db_patrimonio = models.Patrimonio(**patrimonio.model_dump())
+    """Criar um Patrimônio e, quando solicitado, sua Conferência atomicamente."""
+    data = patrimonio.model_dump(exclude={"conferido"})
+    db_patrimonio = models.Patrimonio(**data)
     db.add(db_patrimonio)
+    if patrimonio.conferido:
+        db.add(models.Conferencia(numero_patrimonio=patrimonio.numero_patrimonio))
     db.commit()
     db.refresh(db_patrimonio)
     return db_patrimonio

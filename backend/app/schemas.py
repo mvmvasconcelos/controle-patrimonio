@@ -19,6 +19,7 @@ class PatrimonioBase(BaseModel):
 
 class PatrimonioCreate(PatrimonioBase):
     """Schema para criação de novo patrimônio"""
+    conferido: bool = False
 
     @field_validator(
         "numero_patrimonio", "descricao", "sala", "responsavel", "situacao"

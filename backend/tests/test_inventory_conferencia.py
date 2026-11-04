@@ -165,3 +165,16 @@ def test_create_validates_and_rejects_duplicates(client):
     assert client.post(LIST_URL, json=new_item("  "), headers=client.csrf).status_code == 422
     assert client.post(LIST_URL, json=new_item("9002", descricao=""), headers=client.csrf).status_code == 422
     assert client.post(LIST_URL, json=new_item(" 9003 "), headers=client.csrf).json()["numero_patrimonio"] == "9003"
+
+
+def test_create_and_confer_unknown_patrimonio_in_one_request(client):
+    response = client.post(
+        LIST_URL,
+        json=new_item("9004", conferido=True),
+        headers=client.csrf,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["conferido"] is True
+    with client.app_ref.state.session_factory() as db:
+        assert db.query(Conferencia).filter_by(numero_patrimonio="9004").count() == 1

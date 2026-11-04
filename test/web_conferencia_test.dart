@@ -31,6 +31,7 @@ class _Repository extends WebInventoryRepository {
   final created = <NewInventoryEntry>[];
   final updates = <Map<String, String?>>[];
   Object? markError;
+  Object? filtersError;
 
   InventoryEntry _view(InventoryEntry e) => InventoryEntry(
         number: e.number,
@@ -47,8 +48,11 @@ class _Repository extends WebInventoryRepository {
       username: 'admin', role: 'administrador', csrfToken: 'c');
 
   @override
-  Future<InventoryFilters> fetchFilters() async => const InventoryFilters(
-      rooms: ['Sala A', 'Sala B'], statuses: ['Ativo']);
+  Future<InventoryFilters> fetchFilters() async {
+    if (filtersError != null) throw filtersError!;
+    return const InventoryFilters(
+        rooms: ['Sala A', 'Sala B'], statuses: ['Ativo']);
+  }
 
   @override
   Future<InventoryPage> fetchInventory({
@@ -106,6 +110,7 @@ class _Repository extends WebInventoryRepository {
       responsible: entry.responsible,
       status: entry.status,
     );
+    if (entry.checked) checked.add(entry.number);
     return _view(entries[entry.number]!);
   }
 }
@@ -155,8 +160,7 @@ void main() {
 
   testWidgets('camera scan result is checked; manual entry stays available',
       (tester) async {
-    final repository =
-        await _open(tester, scanBarcode: (_) async => ' 200 ');
+    final repository = await _open(tester, scanBarcode: (_) async => ' 200 ');
     await tester.tap(find.text('Conferir'));
     await tester.pumpAndSettle();
 
@@ -191,8 +195,7 @@ void main() {
     expect(repository.created, isEmpty);
 
     final fields = find.byType(TextFormField);
-    expect(
-        tester.widget<TextFormField>(fields.at(0)).controller!.text, '999');
+    expect(tester.widget<TextFormField>(fields.at(0)).controller!.text, '999');
     await tester.enterText(fields.at(1), 'Projetor');
     await tester.enterText(fields.at(2), 'Sala C');
     await tester.enterText(fields.at(3), 'Carla');
@@ -201,8 +204,7 @@ void main() {
 
     expect(repository.created.single.number, '999');
     expect(repository.checked, ['999']);
-    expect(
-        find.text('Patrimônio 999 cadastrado e conferido.'), findsOneWidget);
+    expect(find.text('Patrimônio 999 cadastrado e conferido.'), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -221,8 +223,20 @@ void main() {
     expect(find.textContaining('Sessão expirada'), findsOneWidget);
   });
 
-  testWidgets('detail edits a Patrimônio and list reflects it',
+  testWidgets('filter loading errors are visible without hiding the inventory',
       (tester) async {
+    final repository = _Repository()
+      ..filtersError = Exception('Falha nos filtros');
+    await tester.pumpWidget(MaterialApp(
+      home: WebApp(repository: repository),
+    ));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Falha ao carregar os filtros'), findsOneWidget);
+    expect(find.text('Mesa de reunião'), findsOneWidget);
+  });
+
+  testWidgets('detail edits a Patrimônio and list reflects it', (tester) async {
     final repository = await _open(tester);
     await tester.tap(find.text('Mesa de reunião'));
     await tester.pumpAndSettle();

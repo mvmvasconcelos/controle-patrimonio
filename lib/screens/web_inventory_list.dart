@@ -34,6 +34,7 @@ class _WebInventoryListState extends State<WebInventoryList> {
   bool _loading = false;
   bool _hasMore = true;
   String? _error;
+  String? _filtersError;
   int _generation = 0;
 
   @override
@@ -64,9 +65,19 @@ class _WebInventoryListState extends State<WebInventoryList> {
   Future<void> _loadFilters() async {
     try {
       final filters = await widget.repository.fetchFilters();
-      if (mounted) setState(() => _filters = filters);
-    } catch (_) {
-      // Filters are optional; list errors are reported by the page load.
+      if (mounted) {
+        setState(() {
+          _filters = filters;
+          _filtersError = null;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _filtersError =
+              'Falha ao carregar os filtros: ${errorMessage(error)}',
+        );
+      }
     }
   }
 
@@ -115,7 +126,8 @@ class _WebInventoryListState extends State<WebInventoryList> {
   }
 
   Future<void> _open(Widget page) async {
-    await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => page));
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute(builder: (_) => page));
     if (mounted) {
       _loadFilters();
       _loadPage(reset: true);
@@ -176,7 +188,8 @@ class _WebInventoryListState extends State<WebInventoryList> {
                 label: 'Sala',
                 value: _room,
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('Todas as salas')),
+                  const DropdownMenuItem(
+                      value: null, child: Text('Todas as salas')),
                   for (final room in _filters.rooms)
                     DropdownMenuItem(value: room, child: Text(room)),
                 ],
@@ -226,6 +239,16 @@ class _WebInventoryListState extends State<WebInventoryList> {
             actions: [
               TextButton(
                 onPressed: () => _loadPage(reset: true),
+                child: const Text('Tentar novamente'),
+              ),
+            ],
+          ),
+        if (_filtersError != null)
+          MaterialBanner(
+            content: Text(_filtersError!),
+            actions: [
+              TextButton(
+                onPressed: _loadFilters,
                 child: const Text('Tentar novamente'),
               ),
             ],
