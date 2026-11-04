@@ -3,6 +3,8 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import event
+from sqlalchemy.orm import Session as OrmSession
 
 from app.main import create_app
 from app.models import Patrimonio
@@ -93,6 +95,26 @@ def test_future_client_time_is_clamped_to_server_time(client):
 
 def test_editado_em_alone_is_not_an_update(client):
     assert patch(client, {"editado_em": "2026-01-01T10:00:00Z"}).status_code == 400
+
+
+def test_lww_edit_and_timestamp_commit_atomically(client):
+    commits = 0
+
+    def count_commit(_session):
+        nonlocal commits
+        commits += 1
+
+    event.listen(OrmSession, "before_commit", count_commit)
+    try:
+        response = patch(
+            client,
+            {"sala": "Sala atômica", "editado_em": "2026-01-01T10:00:00Z"},
+        )
+    finally:
+        event.remove(OrmSession, "before_commit", count_commit)
+
+    assert response.status_code == 200
+    assert commits == 1
 
 
 def test_conferencia_uses_client_time_and_stays_idempotent(client):

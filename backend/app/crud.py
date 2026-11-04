@@ -280,7 +280,10 @@ def edit_patrimonio_lww(
     )
     if edicao is not None and editado_em < _as_utc(edicao.editado_em):
         return False
-    update_patrimonio(db, numero_patrimonio, updates)
+    patrimonio = get_patrimonio_by_numero(db, numero_patrimonio)
+    update_data = updates.model_dump(exclude_unset=True, exclude={"editado_em"})
+    for field, value in update_data.items():
+        setattr(patrimonio, field, value)
     if edicao is None:
         db.add(
             models.PatrimonioEdicao(
@@ -290,6 +293,7 @@ def edit_patrimonio_lww(
     else:
         edicao.editado_em = editado_em
     db.commit()
+    db.refresh(patrimonio)
     return True
 
 

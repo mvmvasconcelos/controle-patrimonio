@@ -17,6 +17,86 @@ final _base = Uri.parse('https://t.test/api/v1/');
 Uint8List _jpeg(int length) =>
     Uint8List.fromList([0xff, 0xd8, 0xff, ...List.filled(length, 1)]);
 
+class _FaultInjectingStore implements OfflineStore {
+  _FaultInjectingStore(this.delegate);
+
+  final OfflineStore delegate;
+  bool failNextEntryWrite = false;
+
+  @override
+  Future<List<InventoryEntry>> entries() => delegate.entries();
+
+  @override
+  Future<InventoryEntry?> entry(String number) => delegate.entry(number);
+
+  @override
+  Future<void> putEntries(Iterable<InventoryEntry> entries) async {
+    if (failNextEntryWrite) {
+      failNextEntryWrite = false;
+      throw StateError('simulated cache write failure');
+    }
+    await delegate.putEntries(entries);
+  }
+
+  @override
+  Future<void> removeEntries(Iterable<String> numbers) =>
+      delegate.removeEntries(numbers);
+
+  @override
+  Future<List<CachedPhoto>> photos(String number) => delegate.photos(number);
+
+  @override
+  Future<Uint8List?> photoBytes(String number, int id) =>
+      delegate.photoBytes(number, id);
+
+  @override
+  Future<bool> putPhoto(String number, int id, Uint8List bytes,
+          {required bool pending}) =>
+      delegate.putPhoto(number, id, bytes, pending: pending);
+
+  @override
+  Future<void> removePhoto(String number, int id) =>
+      delegate.removePhoto(number, id);
+
+  @override
+  Future<void> promotePhoto(String number, int temporaryId, int realId) =>
+      delegate.promotePhoto(number, temporaryId, realId);
+
+  @override
+  Future<int> photoBytesUsed() => delegate.photoBytesUsed();
+
+  @override
+  Future<int> nextTemporaryPhotoId() => delegate.nextTemporaryPhotoId();
+
+  @override
+  Future<List<PendingOperation>> pendingOperations() =>
+      delegate.pendingOperations();
+
+  @override
+  Future<PendingOperation> enqueue(PendingOperation operation) =>
+      delegate.enqueue(operation);
+
+  @override
+  Future<void> updateOperation(PendingOperation operation) =>
+      delegate.updateOperation(operation);
+
+  @override
+  Future<void> removeOperation(int id) => delegate.removeOperation(id);
+
+  @override
+  Future<String?> readMeta(String key) => delegate.readMeta(key);
+
+  @override
+  Future<void> writeMeta(String key, String value) =>
+      delegate.writeMeta(key, value);
+
+  @override
+  Future<void> deleteMeta(String key) => delegate.deleteMeta(key);
+
+  @override
+  Future<void> close() => delegate.close();
+}
+
 void main() {
   late Directory dir;
   late FakeServer server;
@@ -24,13 +104,15 @@ void main() {
   late DateTime now;
   late OfflineInventoryRepository repo;
   late OfflineStore store;
+  late _FaultInjectingStore faultStore;
 
   Future<OfflineInventoryRepository> open({int? budget}) async {
     store = await HiveOfflineStore.open(
         photoBudgetBytes: budget ?? defaultPhotoBudgetBytes);
+    faultStore = _FaultInjectingStore(store);
     return OfflineInventoryRepository.create(
       remote: WebInventoryRepository(client: server.client, apiBaseUrl: _base),
-      store: store,
+      store: faultStore,
       connectivity: network,
       clock: () => now,
       retryInterval: null,
@@ -126,6 +208,21 @@ void main() {
     await settle();
     expect(server.rows['100']!['sala'], 'Sala Z');
     expect(server.editedAt['100'], DateTime.utc(2026, 3, 1, 10));
+  });
+
+  test('offline edit remains queued if updating the cache fails', () async {
+    server.down = true;
+    network.set(false);
+    faultStore.failNextEntryWrite = true;
+
+    await expectLater(
+      repo.updateEntry('100', {'sala': 'Sala Z'}),
+      throwsA(isA<StateError>()),
+    );
+
+    final pending = await store.pendingOperations();
+    expect(pending.single.type, 'update');
+    expect(pending.single.payload['sala'], 'Sala Z');
   });
 
   test('last-write-wins: stale offline edit loses and cache takes server state',

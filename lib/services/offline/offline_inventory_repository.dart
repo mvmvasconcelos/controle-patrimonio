@@ -388,13 +388,18 @@ class OfflineInventoryRepository implements WebInventoryRepository {
       return entry;
     }, () async {
       final local = _applyFields(await _cachedOrThrow(key), fields);
-      await store.putEntries([local]);
       await store.enqueue(PendingOperation(
         type: 'update',
         number: key,
         editedAt: editedAt,
         payload: Map<String, dynamic>.from(fields),
       ));
+      try {
+        await store.putEntries([local]);
+      } catch (_) {
+        await _publish();
+        rethrow;
+      }
       return local;
     });
   }
@@ -417,8 +422,7 @@ class OfflineInventoryRepository implements WebInventoryRepository {
       return created;
     }, () async {
       if (await store.entry(key) != null) {
-        throw ApiException(
-            409, 'Patrimônio $key já existe no Inventário.');
+        throw ApiException(409, 'Patrimônio $key já existe no Inventário.');
       }
       final local = InventoryEntry(
         number: key,
@@ -429,13 +433,18 @@ class OfflineInventoryRepository implements WebInventoryRepository {
         notes: entry.notes,
         checked: entry.checked,
       );
-      await store.putEntries([local]);
       await store.enqueue(PendingOperation(
         type: 'create',
         number: key,
         editedAt: _now(),
         payload: entry.toJson(),
       ));
+      try {
+        await store.putEntries([local]);
+      } catch (_) {
+        await _publish();
+        rethrow;
+      }
       return local;
     });
   }
@@ -457,9 +466,14 @@ class OfflineInventoryRepository implements WebInventoryRepository {
     }, () async {
       final entry = await _cachedOrThrow(key);
       if (!entry.checked) {
-        await store.putEntries([entry.copyWith(checked: true)]);
         await store.enqueue(PendingOperation(
             type: 'check', number: key, editedAt: checkedAt.toUtc()));
+        try {
+          await store.putEntries([entry.copyWith(checked: true)]);
+        } catch (_) {
+          await _publish();
+          rethrow;
+        }
       }
       return ConferenciaResult(
         number: key,
@@ -545,8 +559,7 @@ class OfflineInventoryRepository implements WebInventoryRepository {
       return photo;
     }, () async {
       if ((await store.photos(key)).length >= maxPhotosPerPatrimony) {
-        throw const ApiException(
-            409,
+        throw const ApiException(409,
             'Limite de $maxPhotosPerPatrimony fotos por patrimônio atingido');
       }
       final id = await store.nextTemporaryPhotoId();
@@ -589,13 +602,18 @@ class OfflineInventoryRepository implements WebInventoryRepository {
       }
       await store.removePhoto(key, photoId);
     }, () async {
-      await store.removePhoto(key, photoId);
       await store.enqueue(PendingOperation(
         type: 'delete_photo',
         number: key,
         editedAt: _now(),
         payload: {'photo_id': photoId},
       ));
+      try {
+        await store.removePhoto(key, photoId);
+      } catch (_) {
+        await _publish();
+        rethrow;
+      }
     });
   }
 
