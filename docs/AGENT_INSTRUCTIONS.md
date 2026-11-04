@@ -15,7 +15,7 @@ Referencias rapidas de ambiente:
 - Host interno: `128.1.1.49`
 - Host externo: `ifva.duckdns.org`
 - Backend local: `http://127.0.0.1:6090/api/v1/`
-- Servico Flutter no Docker Compose: `flutter` (nao usar `builder` sem confirmar)
+- Servico Flutter no Docker Compose: `flutter`
 
 ## 2. Regras de Execucao em Container
 
@@ -75,8 +75,8 @@ Quando o usuario confirmar tarefa concluida e validada:
 ### Verificacao
 1. Rodar testes pertinentes:
     - `docker-compose exec -T flutter sh -lc "flutter test"`
-2. Validar build quando aplicavel:
-    - `docker-compose exec -T flutter sh -lc "flutter build apk --debug"`
+2. Validar o build web quando aplicavel:
+    - `docker-compose exec -T flutter sh -lc "flutter build web --release --base-href /controle-patrimonio/"`
 
 ## 5. Qualidade e Seguranca
 

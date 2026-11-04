@@ -9,44 +9,17 @@ services:
     working_dir: /app
     volumes:
       - ./:/app:cached
-      - gradle_cache:/root/.gradle
       - pub_cache:/root/.pub-cache
-      - android_sdk:/opt/android-sdk
     ports:
       - "8092:8090"
     environment:
       TERM: xterm
-      ANDROID_HOME: /opt/android-sdk
     stdin_open: true
     tty: true
     # Manter container vivo para execução de comandos
     command: ["sh", "-c", "tail -f /dev/null"]
     extra_hosts:
       - "host.docker.internal:host-gateway"
-
-  builder:
-    build:
-      context: .
-      target: flutter-sdk
-    container_name: controle-patrimonio-builder
-    working_dir: /app
-    volumes:
-      - ./:/app:cached
-      - gradle_cache:/root/.gradle
-      - pub_cache:/root/.pub-cache
-      - android_sdk:/opt/android-sdk
-    ports:
-      - "8093:8090"
-    environment:
-      TERM: xterm
-      ANDROID_HOME: /opt/android-sdk
-    stdin_open: true
-    tty: true
-    command: ["sh", "-c", "tail -f /dev/null"]
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-
 
   backend:
     build: ./backend
@@ -77,7 +50,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  gradle_cache:
   pub_cache:
-  android_sdk:
   backend_data:

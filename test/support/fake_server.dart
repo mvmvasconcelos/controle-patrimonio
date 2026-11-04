@@ -68,8 +68,9 @@ class FakeServer {
     }
     final parts = path.split('/');
     final number = Uri.decodeComponent(parts[1]);
-    if (!rows.containsKey(number))
+    if (!rows.containsKey(number)) {
       return _json({'detail': 'não encontrado'}, 404);
+    }
     final suffix = parts.length > 2 ? parts.sublist(2).join('/') : '';
     switch ('${request.method} $suffix') {
       case 'GET ':

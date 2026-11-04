@@ -1,45 +1,47 @@
 # Contexto Tecnico
 
 ## Visao de Arquitetura
-O sistema esta em **transicao para arquitetura hibrida**:
-1. **Prioridade atual**: fluxo offline no app (importar planilha, editar, exportar alteracoes).
-2. **Ja implementado no ciclo atual**: sincronizacao assistida por backend e suporte a fotos por item.
 
-Na pratica, o app precisa continuar funcional offline enquanto as capacidades de sincronizacao sao introduzidas gradualmente.
+O produto e um webapp Flutter offline-first. O navegador usa a API como fonte
+de verdade quando ha conexao e mantem uma copia local para continuar a
+Conferencia em areas sem rede.
 
-### Frontend (App Mobile)
-- **Framework**: Flutter (Dart).
-- **Gerenciamento de estado**: `Provider`.
-- **Base local**: `Hive` (NoSQL chave-valor, rapido para leitura).
-- **Base local de fotos**: `sqflite` (SQLite) com BLOB e fila de pendencias de sincronizacao.
-- **Padrao de camadas**:
-    - **Screens**: componentes de interface.
-    - **Providers**: estado e regras de negocio.
-    - **Services/Repositories**: acesso a dados (API/Hive/arquivos).
-    - **Models**: objetos de transferencia de dados (`fromJson`, etc.).
+### Frontend Web
+
+- **Framework:** Flutter Web (Dart).
+- **Estado e regras de negocio:** telas e repositorios; o
+  `OfflineInventoryRepository` implementa a interface do repositório remoto.
+- **Cache offline:** Hive sobre IndexedDB, incluindo inventário, fotos, metadados
+  e fila de operações pendentes.
+- **Câmera e arquivos:** captura pelo navegador, seleção de arquivos e downloads
+  são feitos pelos adaptadores web.
+- **Sincronização:** automática ao recuperar conectividade e disponível pela
+  interface; conflitos de edição seguem last-write-wins por patrimônio.
 
 ### Backend (API)
-- **Framework**: FastAPI (Python).
-- **Banco**: SQLite no servidor.
-- **Papel no projeto**:
-    - oferecer endpoints de suporte para sincronizacao
-    - receber e persistir alteracoes quando o fluxo de sync estiver habilitado
-    - manter endpoints de fotos por item (upload/listagem/download/remocao)
-    - apoiar distribuicao de artefatos quando aplicavel
+
+- **Framework:** FastAPI (Python).
+- **Banco:** SQLite no servidor.
+- **Responsabilidades:** autenticação, inventário, conferências, relatórios,
+  sincronização e endpoints de upload/listagem/download/remoção de fotos.
 
 ### Infraestrutura
-- **Containerizacao**: Docker Compose.
-- **Servicos principais**:
-    - `flutter`: ambiente para comandos Flutter.
-    - `backend`: ambiente Python/FastAPI.
-- **Host**: servidor Linux remoto (IFVA).
 
-## Padroes de Qualidade
-- **Lint**: `flutter_lints`.
-- **Testes**: `flutter test` e testes de integracao/logica quando aplicavel.
-- **Formatacao**: padrao Dart.
+- **Containerização:** Docker Compose.
+- **Serviços:** `flutter` para análise/testes/build web; `backend` para a API;
+  `web` para servir o build e encaminhar requisições à API.
+- **Host:** servidor Linux remoto (IFVA).
 
-## Restricoes-Chave
-1. **Sem execucao direta no host**: comandos tecnicos devem rodar via `docker-compose`.
-2. **Compatibilidade retroativa**: fluxo por planilha offline deve continuar funcionando durante a transicao.
-3. **Controle de versao e contratos**: mudancas de app/API devem evitar incompatibilidades disruptivas.
+## Padrões de Qualidade
+
+- **Lint:** `flutter_lints`.
+- **Testes:** `flutter test`, incluindo testes de repositório web, cache offline,
+  fotos e widgets.
+- **Formatação:** padrão Dart.
+
+## Restrições-Chave
+
+1. Comandos Flutter e Python são executados nos serviços Docker do projeto.
+2. Importação/exportação pelo navegador e operação offline devem continuar
+   disponíveis sem depender do backend durante uma interrupção de rede.
+3. Mudanças na API devem preservar contratos e a fila local de operações.
