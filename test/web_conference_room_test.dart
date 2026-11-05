@@ -54,8 +54,9 @@ class _RoomRepository extends WebInventoryRepository {
               entry.description.toLowerCase().contains(term))
           .toList();
     }
-    if (room != null)
+    if (room != null) {
       result = result.where((entry) => entry.room == room).toList();
+    }
     return InventoryPage(
       total: result.length,
       items: result.skip(offset).take(limit).toList(),
