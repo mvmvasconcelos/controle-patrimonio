@@ -6,6 +6,7 @@ import '../theme.dart';
 import '../widgets/sync_status_bar.dart';
 import 'web_conference_report.dart';
 import 'web_data_management_page.dart';
+import 'web_home_page.dart';
 import 'web_inventory_list.dart';
 import 'web_patrimony_pages.dart';
 
@@ -127,6 +128,22 @@ class _WebAppState extends State<WebApp> {
     );
   }
 
+  void _openInventory() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('Inventário')),
+          body: CenteredColumn(
+            child: WebInventoryList(
+              repository: _repository,
+              scanBarcode: widget.scanBarcode,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   String _message(Object error) =>
       error.toString().replaceFirst('Exception: ', '');
 
@@ -214,7 +231,7 @@ class _WebAppState extends State<WebApp> {
   Widget _buildInventory() {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inventário'),
+        title: const Text('Início'),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -259,10 +276,11 @@ class _WebAppState extends State<WebApp> {
                 ],
               ),
             Expanded(
-              child: WebInventoryList(
+              child: WebHomePage(
                 key: ValueKey(_inventoryVersion),
                 repository: _repository,
                 scanBarcode: widget.scanBarcode,
+                onOpenInventory: _openInventory,
               ),
             ),
           ],
@@ -305,7 +323,7 @@ class _WebAppState extends State<WebApp> {
           ListTile(
             leading: const Icon(Icons.list_alt),
             title: const Text('Inventário'),
-            onTap: () => Navigator.of(context).pop(),
+            onTap: () => _openFromDrawer(_openInventory),
           ),
           ListTile(
             leading: const Icon(Icons.upload_file),

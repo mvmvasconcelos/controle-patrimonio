@@ -133,6 +133,8 @@ Future<_Repository> _open(WidgetTester tester,
     home: WebApp(repository: repository, scanBarcode: scanBarcode),
   ));
   await tester.pumpAndSettle();
+  await tester.tap(find.text('Ver Inventário'));
+  await tester.pumpAndSettle();
   return repository;
 }
 
@@ -327,6 +329,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: WebApp(repository: repository),
     ));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ver Inventário'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Falha ao carregar os filtros'), findsOneWidget);
