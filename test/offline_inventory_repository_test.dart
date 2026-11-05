@@ -503,4 +503,46 @@ void main() {
     expect(entry.room, 'Direta');
     expect(server.editedAt['100'], DateTime.utc(2026, 3, 1, 10));
   });
+
+  test('local data stats count cached Patrimônios and pending changes',
+      () async {
+    server.down = true;
+    network.set(false);
+    await repo.markChecked('101');
+    final stats = await repo.localDataStats();
+    expect(stats.total, 3);
+    expect(stats.modified, 1);
+  });
+
+  test('resetLocalChanges drops pending changes and restores the server state',
+      () async {
+    server.down = true;
+    network.set(false);
+    await repo.markChecked('101');
+    await repo.updateEntry('100', {'sala': 'Direta'});
+    await repo.resetLocalChanges();
+    expect(repo.syncStatus.pending, 0);
+    server.down = false;
+    network.set(true);
+    await settle();
+
+    expect(repo.syncStatus.pending, 0);
+    expect(server.rows['101']!['conferido'], isFalse);
+    expect((await repo.fetchEntry('101'))!.checked, isFalse);
+    expect((await repo.fetchEntry('100'))!.room, 'Sala A');
+    expect((await repo.localDataStats()).modified, 0);
+  });
+
+  test('clearLocalData empties entries and the queue', () async {
+    server.down = true;
+    network.set(false);
+    await repo.markChecked('101');
+    await repo.clearLocalData();
+
+    expect(await store.entries(), isEmpty);
+    expect(await store.pendingOperations(), isEmpty);
+    expect(repo.syncStatus.pending, 0);
+    final stats = await repo.localDataStats();
+    expect((stats.total, stats.modified), (0, 0));
+  });
 }

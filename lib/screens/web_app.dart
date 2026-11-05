@@ -4,6 +4,8 @@ import '../services/file_download.dart';
 import '../services/web_inventory_repository.dart';
 import '../theme.dart';
 import '../widgets/sync_status_bar.dart';
+import 'web_about_page.dart';
+import 'web_cache_management_page.dart';
 import 'web_conference_report.dart';
 import 'web_data_management_page.dart';
 import 'web_home_page.dart';
@@ -140,6 +142,19 @@ class _WebAppState extends State<WebApp> {
             if (mounted) setState(() => _inventoryVersion++);
           },
           onOpenInventory: _openInventory,
+        ),
+      ),
+    );
+  }
+
+  void _openCacheManagement() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => WebCacheManagementPage(
+          repository: _repository,
+          onChanged: () {
+            if (mounted) setState(() => _inventoryVersion++);
+          },
         ),
       ),
     );
@@ -367,16 +382,16 @@ class _WebAppState extends State<WebApp> {
           ListTile(
             leading: const Icon(Icons.storage),
             title: const Text('Gerenciar Dados e Cache'),
-            onTap: () => _openFromDrawer(_openDataManagement),
+            onTap: () => _openFromDrawer(_openCacheManagement),
           ),
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('Sobre'),
-            onTap: () => _openFromDrawer(() => showAboutDialog(
-                  context: context,
-                  applicationName: 'Controle Patrimônio',
-                  applicationLegalese: 'IFSUL',
-                )),
+            onTap: () => _openFromDrawer(() {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const WebAboutPage()),
+              );
+            }),
           ),
         ],
       ),
