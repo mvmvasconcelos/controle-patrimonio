@@ -97,10 +97,11 @@ class _WebCacheManagementPageState extends State<WebCacheManagementPage> {
   }
 
   Future<void> _reset(int modified) async {
+    final patrimonyLabel = modified == 1 ? 'patrimônio' : 'patrimônios';
     final ok = await _confirm(
       title: 'Resetar modificações?',
       message:
-          'Isso descartará as alterações feitas em $modified item(ns) '
+          'Isso descartará as alterações feitas em $modified $patrimonyLabel '
           'que ainda não foram enviadas ao servidor e restaurará o estado '
           'do servidor.',
       action: 'Resetar',

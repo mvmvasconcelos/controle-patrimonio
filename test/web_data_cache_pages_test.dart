@@ -82,6 +82,7 @@ void main() {
       await tester.tap(find.text('Resetar modificações'));
       await tester.pumpAndSettle();
       expect(find.text('Resetar modificações?'), findsOneWidget);
+      expect(find.textContaining('2 patrimônios'), findsOneWidget);
       expect(repo.resets, 0);
 
       await tester.tap(find.text('Resetar'));

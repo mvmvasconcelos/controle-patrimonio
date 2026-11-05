@@ -76,9 +76,10 @@ void main() {
     await _open(tester);
     expect(find.text('Mesa de reunião'), findsOneWidget);
     expect(find.text('100 • Sala: Sala A'), findsOneWidget);
+    expect(find.text('Buscar por número ou descrição'), findsOneWidget);
     expect(find.text('Ativo'), findsNWidgets(2));
     expect(find.text('Baixado'), findsOneWidget);
-    expect(find.text('3 de 3 itens'), findsOneWidget);
+    expect(find.text('3 de 3 patrimônios'), findsOneWidget);
   });
 
   testWidgets('search narrows the list and updates the counter',
@@ -87,7 +88,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'Mesa');
     await tester.pumpAndSettle(const Duration(seconds: 1));
     expect(find.text('Cadeira giratória'), findsNothing);
-    expect(find.text('2 de 3 itens'), findsOneWidget);
+    expect(find.text('2 de 3 patrimônios'), findsOneWidget);
   });
 
   testWidgets('filter sheet restricts the list by Sala and situação',
@@ -109,7 +110,7 @@ void main() {
     expect(find.text('Mesa auxiliar'), findsOneWidget);
     expect(find.text('Mesa de reunião'), findsNothing);
     expect(find.text('Cadeira giratória'), findsNothing);
-    expect(find.text('1 de 3 itens'), findsOneWidget);
+    expect(find.text('1 de 3 patrimônios'), findsOneWidget);
   });
 
   testWidgets('tapping a row opens the Patrimônio detail', (tester) async {

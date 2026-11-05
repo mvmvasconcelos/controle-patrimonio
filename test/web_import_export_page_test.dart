@@ -92,7 +92,8 @@ void main() {
   testWidgets('exportar só modificados fica desabilitado sem modificações',
       (tester) async {
     await _open(tester, _Repository(modified: 0));
-    final card = find.widgetWithText(ListTile, 'Somente itens modificados');
+    final card =
+        find.widgetWithText(ListTile, 'Somente patrimônios modificados');
     expect(tester.widget<ListTile>(card).enabled, isFalse);
     expect(
         tester
@@ -107,10 +108,11 @@ void main() {
     final repository = _Repository(modified: 2);
     final downloads = <String>[];
     await _open(tester, repository, downloads: downloads);
+    expect(find.textContaining('Total: 2 patrimônios'), findsOneWidget);
 
     await tester.tap(find.text('.csv'));
     await tester.pump();
-    await tester.tap(find.text('Somente itens modificados'));
+    await tester.tap(find.text('Somente patrimônios modificados'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('.xlsx'));
     await tester.pump();
