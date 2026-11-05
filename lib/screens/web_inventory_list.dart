@@ -30,6 +30,7 @@ class _WebInventoryListState extends State<WebInventoryList> {
   final List<InventoryEntry> _items = [];
   InventoryFilters _filters = const InventoryFilters(rooms: [], statuses: []);
   int _total = 0;
+  int? _overall;
   String? _room;
   String? _status;
   bool? _checked;
@@ -95,6 +96,11 @@ class _WebInventoryListState extends State<WebInventoryList> {
       _error = null;
     });
     try {
+      if (reset && _filtersActive && _overall == null) {
+        final all = await widget.repository.fetchInventory(limit: 1);
+        if (generation != _generation || !mounted) return;
+        _overall = all.total;
+      }
       final page = await widget.repository.fetchInventory(
         query: _search.text,
         room: _room,
@@ -106,6 +112,7 @@ class _WebInventoryListState extends State<WebInventoryList> {
       if (generation != _generation || !mounted) return;
       _items.addAll(page.items);
       _total = page.total;
+      if (!_filtersActive) _overall = page.total;
       _hasMore = page.items.isNotEmpty && _items.length < page.total;
     } catch (error) {
       if (generation != _generation || !mounted) return;
@@ -131,9 +138,98 @@ class _WebInventoryListState extends State<WebInventoryList> {
     await Navigator.of(context)
         .push<void>(MaterialPageRoute(builder: (_) => page));
     if (mounted) {
+      _overall = null;
       _loadFilters();
       _loadPage(reset: true);
     }
+  }
+
+  bool get _filtersActive =>
+      _search.text.trim().isNotEmpty ||
+      _room != null ||
+      _status != null ||
+      _checked != null;
+
+  int get _activeFilterCount =>
+      [_room, _status, _checked].where((f) => f != null).length;
+
+  Future<void> _showFilterSheet() {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (sheetContext, setSheet) {
+          void apply(void Function() change) {
+            _applyFilters(change);
+            setSheet(() {});
+          }
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Filtros',
+                      style: Theme.of(sheetContext).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  _dropdown<String>(
+                    label: 'Sala',
+                    value: _room,
+                    items: [
+                      const DropdownMenuItem(
+                          value: null, child: Text('Todas as salas')),
+                      for (final room in _filters.rooms)
+                        DropdownMenuItem(value: room, child: Text(room)),
+                    ],
+                    onChanged: (value) => apply(() => _room = value),
+                  ),
+                  const SizedBox(height: 12),
+                  _dropdown<String>(
+                    label: 'Situação',
+                    value: _status,
+                    items: [
+                      const DropdownMenuItem(
+                          value: null, child: Text('Todas as situações')),
+                      for (final status in _filters.statuses)
+                        DropdownMenuItem(value: status, child: Text(status)),
+                    ],
+                    onChanged: (value) => apply(() => _status = value),
+                  ),
+                  const SizedBox(height: 12),
+                  _dropdown<bool>(
+                    label: 'Conferência',
+                    value: _checked,
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text('Todos')),
+                      DropdownMenuItem(value: true, child: Text('Conferidos')),
+                      DropdownMenuItem(
+                          value: false, child: Text('Não conferidos')),
+                    ],
+                    onChanged: (value) => apply(() => _checked = value),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _activeFilterCount == 0
+                          ? null
+                          : () => apply(() {
+                                _room = null;
+                                _status = null;
+                                _checked = null;
+                              }),
+                      child: const Text('Limpar filtros'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Widget _dropdown<T>({
@@ -142,19 +238,16 @@ class _WebInventoryListState extends State<WebInventoryList> {
     required List<DropdownMenuItem<T?>> items,
     required ValueChanged<T?> onChanged,
   }) {
-    return SizedBox(
-      width: 200,
-      child: DropdownButtonFormField<T?>(
-        value: value,
-        isExpanded: true,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-          isDense: true,
-        ),
-        items: items,
-        onChanged: onChanged,
+    return DropdownButtonFormField<T?>(
+      value: value,
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        isDense: true,
       ),
+      items: items,
+      onChanged: onChanged,
     );
   }
 
@@ -164,17 +257,14 @@ class _WebInventoryListState extends State<WebInventoryList> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            crossAxisAlignment: WrapCrossAlignment.center,
+          child: Row(
             children: [
-              SizedBox(
-                width: 280,
+              Expanded(
                 child: TextField(
                   controller: _search,
                   decoration: const InputDecoration(
-                    labelText: 'Buscar por número ou descrição',
+                    hintText:
+                        'Buscar por número, descrição, sala ou responsável',
                     prefixIcon: Icon(Icons.search),
                     border: OutlineInputBorder(),
                     isDense: true,
@@ -186,38 +276,26 @@ class _WebInventoryListState extends State<WebInventoryList> {
                   },
                 ),
               ),
-              _dropdown<String>(
-                label: 'Sala',
-                value: _room,
-                items: [
-                  const DropdownMenuItem(
-                      value: null, child: Text('Todas as salas')),
-                  for (final room in _filters.rooms)
-                    DropdownMenuItem(value: room, child: Text(room)),
-                ],
-                onChanged: (value) => _applyFilters(() => _room = value),
+              const SizedBox(width: 8),
+              Badge(
+                isLabelVisible: _activeFilterCount > 0,
+                label: Text('$_activeFilterCount'),
+                child: IconButton.filledTonal(
+                  tooltip: 'Filtros',
+                  onPressed: _showFilterSheet,
+                  icon: const Icon(Icons.filter_list),
+                ),
               ),
-              _dropdown<String>(
-                label: 'Situação',
-                value: _status,
-                items: [
-                  const DropdownMenuItem(
-                      value: null, child: Text('Todas as situações')),
-                  for (final status in _filters.statuses)
-                    DropdownMenuItem(value: status, child: Text(status)),
-                ],
-                onChanged: (value) => _applyFilters(() => _status = value),
-              ),
-              _dropdown<bool>(
-                label: 'Conferência',
-                value: _checked,
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('Todos')),
-                  DropdownMenuItem(value: true, child: Text('Conferidos')),
-                  DropdownMenuItem(value: false, child: Text('Não conferidos')),
-                ],
-                onChanged: (value) => _applyFilters(() => _checked = value),
-              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
               FilledButton.icon(
                 onPressed: () => _open(WebConferenciaPage(
                   repository: widget.repository,
@@ -273,7 +351,7 @@ class _WebInventoryListState extends State<WebInventoryList> {
           padding: const EdgeInsets.all(16),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text('$_total patrimônios'),
+            child: Text('$_total de ${_overall ?? _total} itens'),
           ),
         ),
         Expanded(
@@ -294,7 +372,7 @@ class _WebInventoryListState extends State<WebInventoryList> {
                     return ListTile(
                       title: Text(entry.description),
                       subtitle: Text(
-                        '${entry.number} • ${entry.room} • ${entry.responsible}',
+                        '${entry.number} • Sala: ${entry.room}',
                       ),
                       leading: Icon(
                         entry.checked
@@ -304,7 +382,10 @@ class _WebInventoryListState extends State<WebInventoryList> {
                         semanticLabel:
                             entry.checked ? 'Conferido' : 'Não conferido',
                       ),
-                      trailing: Text(entry.status),
+                      trailing: Chip(
+                        label: Text(entry.status),
+                        visualDensity: VisualDensity.compact,
+                      ),
                       onTap: () => _open(WebPatrimonyDetailPage(
                         repository: widget.repository,
                         entry: entry,
