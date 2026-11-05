@@ -35,7 +35,7 @@ class _WebImportExportPageState extends State<WebImportExportPage> {
   @override
   void initState() {
     super.initState();
-    _run(() async {});
+    _run(() async => null);
   }
 
   Future<void> _run(Future<String?> Function() action) async {

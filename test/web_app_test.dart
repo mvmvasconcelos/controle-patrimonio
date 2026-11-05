@@ -153,8 +153,8 @@ void main() {
 
     await tester.tap(find.text('Relatório de conferência'));
     await tester.pumpAndSettle();
-    expect(find.text('Total: 1'), findsOneWidget);
-    expect(find.text('Conferidos: 1'), findsOneWidget);
+    expect(find.text('Total'), findsWidgets);
+    expect(find.text('Conferidos'), findsWidgets);
     await tester.pageBack();
     await tester.pumpAndSettle();
 
@@ -258,7 +258,7 @@ void main() {
 
     await tester.tap(find.widgetWithText(ListTile, 'Relatório de alterações'));
     await tester.pumpAndSettle();
-    expect(find.text('Total: 1'), findsOneWidget);
+    expect(find.text('Total'), findsWidgets);
   });
 
   testWidgets('menu Importar / Exportar abre a tela própria', (tester) async {

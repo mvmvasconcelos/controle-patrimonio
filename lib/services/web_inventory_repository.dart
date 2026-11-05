@@ -19,6 +19,22 @@ class InventoryTotals {
   final int modified;
 }
 
+class ChangedItem {
+  const ChangedItem({
+    required this.number,
+    required this.description,
+    required this.room,
+    required this.checked,
+    required this.photos,
+  });
+
+  final String number;
+  final String description;
+  final String room;
+  final bool checked;
+  final int photos;
+}
+
 class AdminSession {
   const AdminSession({
     required this.username,
@@ -462,15 +478,15 @@ class WebInventoryRepository {
       throw Exception(
           'Foto maior que o limite de ${maxPhotoBytes ~/ (1024 * 1024)} MB');
     }
-    final request = http.MultipartRequest(
-        'POST', _patrimonyUri(number, suffix: '/fotos'))
-      ..headers['X-CSRF-Token'] = _csrfToken ?? ''
-      ..files.add(http.MultipartFile.fromBytes(
-        'foto',
-        bytes,
-        filename: 'foto.jpg',
-        contentType: MediaType('image', 'jpeg'),
-      ));
+    final request =
+        http.MultipartRequest('POST', _patrimonyUri(number, suffix: '/fotos'))
+          ..headers['X-CSRF-Token'] = _csrfToken ?? ''
+          ..files.add(http.MultipartFile.fromBytes(
+            'foto',
+            bytes,
+            filename: 'foto.jpg',
+            contentType: MediaType('image', 'jpeg'),
+          ));
     final response = await http.Response.fromStream(
       await _client.send(request),
     );
@@ -562,6 +578,22 @@ class WebInventoryRepository {
     String two(int n) => n.toString().padLeft(2, '0');
     return '${time.year}-${two(time.month)}-${two(time.day)} '
         '${two(time.hour)}:${two(time.minute)}';
+  }
+
+  /// Itens modificados (editados, conferidos ou com fotos) para revisão.
+  Future<List<ChangedItem>> fetchChanges() async {
+    final rows = parseCsv((await exportChanges()).bytes);
+    return [
+      for (final row in rows.skip(1))
+        if (row.length >= 8)
+          ChangedItem(
+            number: row[0],
+            description: row[1],
+            room: row[2],
+            checked: row[6] == 'Sim',
+            photos: int.tryParse(row[7]) ?? 0,
+          ),
+    ];
   }
 
   /// Sem cache local no cliente online puro: não há fotos a restaurar.

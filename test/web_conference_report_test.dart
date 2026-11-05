@@ -49,6 +49,13 @@ void main() {
             200,
           );
         }
+        if (request.url.path.endsWith('/exportar/alteracoes')) {
+          return http.Response(
+              'numero_patrimonio,descricao,sala,responsavel,situacao,'
+              'observacoes,conferido,fotos\r\n'
+              '101,Mesa,Sala C,Ana,Ativo,,Sim,1\r\n',
+              200);
+        }
         return http.Response('', 404);
       }),
       apiBaseUrl: Uri.parse('https://host/api/v1/'),
@@ -59,10 +66,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Relatório de conferência'), findsOneWidget);
-    expect(find.text('Total: 5'), findsOneWidget);
-    expect(find.text('Conferidos: 2'), findsOneWidget);
-    expect(find.text('Pendentes: 3'), findsOneWidget);
+    expect(find.text('Relatório de alterações'), findsOneWidget);
+    final stats = find.byType(Card).first;
+    for (final text in ['Total', '5', 'Conferidos', '2', 'Pendentes', '3']) {
+      expect(
+          find.descendant(of: stats, matching: find.text(text)), findsOneWidget,
+          reason: text);
+    }
+    expect(find.text('Itens modificados'), findsOneWidget);
+    expect(find.text('101 · Mesa'), findsOneWidget);
     expect(find.text('Sala A'), findsOneWidget);
     expect(find.text('Ativo'), findsOneWidget);
     expect(find.text('Baixado'), findsOneWidget);

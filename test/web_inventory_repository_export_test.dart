@@ -70,4 +70,13 @@ void main() {
     final archive = ZipDecoder().decodeBytes(file.bytes);
     expect(archive.findFile('xl/worksheets/sheet1.xml'), isNotNull);
   });
+
+  test('fetchChanges lista os itens modificados', () async {
+    final changes = await _repository().fetchChanges();
+    expect(changes, hasLength(1));
+    expect(changes.single.number, '101');
+    expect(changes.single.description, 'Mesa');
+    expect(changes.single.checked, isTrue);
+    expect(changes.single.photos, 0);
+  });
 }

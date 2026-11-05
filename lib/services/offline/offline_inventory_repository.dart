@@ -785,6 +785,9 @@ class OfflineInventoryRepository implements WebInventoryRepository {
   Future<InventoryTotals> fetchTotals() => remote.fetchTotals();
 
   @override
+  Future<List<ChangedItem>> fetchChanges() => remote.fetchChanges();
+
+  @override
   Future<DownloadedFile> exportSpreadsheet({
     required ExportFormat format,
     required bool onlyModified,
