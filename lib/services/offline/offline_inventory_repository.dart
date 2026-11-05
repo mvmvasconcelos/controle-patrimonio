@@ -216,7 +216,7 @@ class OfflineInventoryRepository implements WebInventoryRepository {
   @override
   Future<LocalDataStats> localDataStats() async => LocalDataStats(
         total: (await store.entries()).length,
-        modified: (await store.pendingOperations()).length,
+        modified: (await _pendingNumbers()).length,
       );
 
   /// Descarta a fila de alterações locais e baixa de novo o estado do
@@ -224,7 +224,19 @@ class OfflineInventoryRepository implements WebInventoryRepository {
   @override
   Future<void> resetLocalChanges() async {
     final ops = await store.pendingOperations();
+    if (ops.isEmpty) return;
+    if (!connectivity.isOnline) {
+      throw StateError(
+        'Não é possível resetar modificações sem conexão com o servidor.',
+      );
+    }
     final numbers = ops.map((o) => o.number).toSet();
+    final restored = <String, InventoryEntry>{};
+    for (final number in numbers) {
+      final entry = await remote.fetchEntry(number);
+      if (entry != null) restored[number] = entry;
+    }
+    await store.putEntries(restored.values);
     for (final op in ops) {
       await store.removeOperation(op.id!);
     }
@@ -233,7 +245,7 @@ class OfflineInventoryRepository implements WebInventoryRepository {
         if (photo.pending) await store.removePhoto(number, photo.id);
       }
     }
-    await store.removeEntries(numbers);
+    await store.removeEntries(numbers.difference(restored.keys.toSet()));
     await _publish();
     await synchronize();
   }
