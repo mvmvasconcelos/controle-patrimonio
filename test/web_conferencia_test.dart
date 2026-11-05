@@ -148,6 +148,8 @@ void main() {
     expect(find.text('Cadeira giratória'), findsNothing);
     expect(repository.queries.last['query'], 'Mesa');
 
+    await tester.tap(find.byTooltip('Filtros'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Conferência').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Conferidos').last);
