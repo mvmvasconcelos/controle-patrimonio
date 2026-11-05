@@ -7,6 +7,7 @@ import '../widgets/sync_status_bar.dart';
 import 'web_conference_report.dart';
 import 'web_data_management_page.dart';
 import 'web_home_page.dart';
+import 'web_import_export_page.dart';
 import 'web_inventory_list.dart';
 import 'web_patrimony_pages.dart';
 
@@ -123,6 +124,22 @@ class _WebAppState extends State<WebApp> {
           onImported: () async {
             if (mounted) setState(() => _inventoryVersion++);
           },
+        ),
+      ),
+    );
+  }
+
+  void _openImportExport() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => WebImportExportPage(
+          repository: _repository,
+          pickFile: widget.pickInventoryFile ?? pickInventoryFileFromBrowser,
+          saveDownload: widget.saveDownload ?? saveDownloadedFile,
+          onImported: () async {
+            if (mounted) setState(() => _inventoryVersion++);
+          },
+          onOpenInventory: _openInventory,
         ),
       ),
     );
@@ -328,7 +345,7 @@ class _WebAppState extends State<WebApp> {
           ListTile(
             leading: const Icon(Icons.upload_file),
             title: const Text('Importar / Exportar'),
-            onTap: () => _openFromDrawer(_openDataManagement),
+            onTap: () => _openFromDrawer(_openImportExport),
           ),
           ListTile(
             leading: const Icon(Icons.table_chart),

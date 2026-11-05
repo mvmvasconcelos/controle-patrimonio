@@ -45,6 +45,9 @@ class _FaultInjectingStore implements OfflineStore {
   Future<List<CachedPhoto>> photos(String number) => delegate.photos(number);
 
   @override
+  Future<List<CachedPhoto>> allPhotos() => delegate.allPhotos();
+
+  @override
   Future<Uint8List?> photoBytes(String number, int id) =>
       delegate.photoBytes(number, id);
 
@@ -401,6 +404,24 @@ void main() {
       network.set(false);
       expect(await repo.fetchPhotoBytes('102', 50), _jpeg(300));
       expect((await repo.fetchPhotos('102')).single.id, 50);
+    });
+
+    test('restoreSyncedPhotos baixa as fotos do servidor que faltam no cache',
+        () async {
+      server.photos['100'] = {7: _jpeg(100)};
+      server.photos['101'] = {8: _jpeg(100), 9: _jpeg(100)};
+      expect(await repo.restoreSyncedPhotos(), 3);
+      expect(await store.photos('101'), hasLength(2));
+      expect(await repo.restoreSyncedPhotos(), 0);
+    });
+
+    test('cleanOrphanPhotos remove fotos de patrimônios fora do Inventário',
+        () async {
+      await store.putPhoto('999', 5, _jpeg(100), pending: false);
+      await store.putPhoto('100', 6, _jpeg(100), pending: false);
+      expect(await repo.cleanOrphanPhotos(), 1);
+      expect(await store.photos('999'), isEmpty);
+      expect(await store.photos('100'), hasLength(1));
     });
 
     test('offline limit of 3 photos per Patrimônio is enforced', () async {

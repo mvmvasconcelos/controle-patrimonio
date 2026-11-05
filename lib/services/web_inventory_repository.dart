@@ -4,11 +4,36 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart' show MediaType;
 
+import 'export_formats.dart';
 import 'file_download.dart';
 import 'offline/sync_status.dart';
 import 'web_http_client.dart';
 
+export 'export_formats.dart' show ExportFormat;
 export 'file_download.dart' show DownloadedFile;
+
+class InventoryTotals {
+  const InventoryTotals({required this.total, required this.modified});
+
+  final int total;
+  final int modified;
+}
+
+class ChangedItem {
+  const ChangedItem({
+    required this.number,
+    required this.description,
+    required this.room,
+    required this.checked,
+    required this.photos,
+  });
+
+  final String number;
+  final String description;
+  final String room;
+  final bool checked;
+  final int photos;
+}
 
 class AdminSession {
   const AdminSession({
@@ -453,15 +478,15 @@ class WebInventoryRepository {
       throw Exception(
           'Foto maior que o limite de ${maxPhotoBytes ~/ (1024 * 1024)} MB');
     }
-    final request = http.MultipartRequest(
-        'POST', _patrimonyUri(number, suffix: '/fotos'))
-      ..headers['X-CSRF-Token'] = _csrfToken ?? ''
-      ..files.add(http.MultipartFile.fromBytes(
-        'foto',
-        bytes,
-        filename: 'foto.jpg',
-        contentType: MediaType('image', 'jpeg'),
-      ));
+    final request =
+        http.MultipartRequest('POST', _patrimonyUri(number, suffix: '/fotos'))
+          ..headers['X-CSRF-Token'] = _csrfToken ?? ''
+          ..files.add(http.MultipartFile.fromBytes(
+            'foto',
+            bytes,
+            filename: 'foto.jpg',
+            contentType: MediaType('image', 'jpeg'),
+          ));
     final response = await http.Response.fromStream(
       await _client.send(request),
     );
@@ -513,6 +538,68 @@ class WebInventoryRepository {
 
   Future<DownloadedFile> exportReport() =>
       _download('inventario/exportar/relatorio', 'relatorio.csv');
+
+  /// Total do Inventário e quantidade de patrimônios modificados (editados,
+  /// conferidos ou com fotos), conforme a exportação de alterações.
+  Future<InventoryTotals> fetchTotals() async {
+    final total = (await fetchInventory(limit: 1)).total;
+    final changes = parseCsv((await exportChanges()).bytes);
+    return InventoryTotals(
+      total: total,
+      modified: changes.isEmpty ? 0 : changes.length - 1,
+    );
+  }
+
+  /// Exporta só os modificados ou a planilha completa (com ATUALIZADO_EM,
+  /// preenchida apenas nos modificados), em .xlsx ou .csv.
+  Future<DownloadedFile> exportSpreadsheet({
+    required ExportFormat format,
+    required bool onlyModified,
+    DateTime? now,
+  }) async {
+    var rows = parseCsv((await exportChanges()).bytes);
+    if (!onlyModified) {
+      final modified = {for (final row in rows.skip(1)) row.first};
+      final stamp = _formatStamp(now ?? DateTime.now());
+      rows = withUpdatedAt(
+        parseCsv((await exportReport()).bytes),
+        modified,
+        stamp,
+      );
+    }
+    final name = onlyModified ? 'alteracoes' : 'planilha_completa';
+    return switch (format) {
+      ExportFormat.csv => DownloadedFile('$name.csv', encodeCsv(rows)),
+      ExportFormat.xlsx => DownloadedFile('$name.xlsx', encodeXlsx(rows)),
+    };
+  }
+
+  String _formatStamp(DateTime time) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${time.year}-${two(time.month)}-${two(time.day)} '
+        '${two(time.hour)}:${two(time.minute)}';
+  }
+
+  /// Itens modificados (editados, conferidos ou com fotos) para revisão.
+  Future<List<ChangedItem>> fetchChanges() async {
+    final rows = parseCsv((await exportChanges()).bytes);
+    return [
+      for (final row in rows.skip(1))
+        if (row.length >= 8)
+          ChangedItem(
+            number: row[0],
+            description: row[1],
+            room: row[2],
+            checked: row[6] == 'Sim',
+            photos: int.tryParse(row[7]) ?? 0,
+          ),
+    ];
+  }
+
+  /// Sem cache local no cliente online puro: não há fotos a restaurar.
+  Future<int> restoreSyncedPhotos() async => 0;
+
+  Future<int> cleanOrphanPhotos() async => 0;
 
   Future<DownloadedFile> _download(String path, String filename) async {
     final response = await _client.get(_uri(path));

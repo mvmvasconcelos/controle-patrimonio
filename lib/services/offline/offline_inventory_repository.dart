@@ -781,6 +781,50 @@ class OfflineInventoryRepository implements WebInventoryRepository {
   @override
   Future<DownloadedFile> exportReport() => remote.exportReport();
 
+  @override
+  Future<InventoryTotals> fetchTotals() => remote.fetchTotals();
+
+  @override
+  Future<List<ChangedItem>> fetchChanges() => remote.fetchChanges();
+
+  @override
+  Future<DownloadedFile> exportSpreadsheet({
+    required ExportFormat format,
+    required bool onlyModified,
+    DateTime? now,
+  }) =>
+      remote.exportSpreadsheet(
+        format: format,
+        onlyModified: onlyModified,
+        now: now ?? _clock(),
+      );
+
+  /// Baixa para o cache as fotos do servidor que ainda não estão nele.
+  @override
+  Future<int> restoreSyncedPhotos() async {
+    var restored = 0;
+    for (final entry in await store.entries()) {
+      final before = (await store.photos(entry.number)).length;
+      await fetchPhotos(entry.number);
+      final after = (await store.photos(entry.number)).length;
+      if (after > before) restored += after - before;
+    }
+    return restored;
+  }
+
+  /// Remove do cache as fotos de patrimônios que não estão mais no Inventário.
+  @override
+  Future<int> cleanOrphanPhotos() async {
+    final known = {for (final e in await store.entries()) e.number};
+    var removed = 0;
+    for (final photo in await store.allPhotos()) {
+      if (known.contains(photo.number)) continue;
+      await store.removePhoto(photo.number, photo.id);
+      removed++;
+    }
+    return removed;
+  }
+
   void dispose() {
     if (_disposed) return;
     _disposed = true;
