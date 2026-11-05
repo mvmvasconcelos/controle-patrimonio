@@ -201,9 +201,9 @@ O produto é um webapp offline-first: o backend (FastAPI + SQLite) é a fonte de
 
 ---
 
-### Etapa 13: Paridade Visual com o APK
+### Etapa 13: Paridade Visual com o Aplicativo Nativo Anterior
 
-**Objetivo:** Levar o webapp ao visual e às funções do antigo APK (spec #11).
+**Objetivo:** Levar o webapp ao visual e às funções do aplicativo nativo anterior (spec #11).
 
 **Status de fechamento:** Desenvolvida e testada; falta a revisão visual do usuário em build web.
 
@@ -212,4 +212,4 @@ O produto é um webapp offline-first: o backend (FastAPI + SQLite) é a fonte de
 -   [x] **13.3.** Inventário com busca, contador "N de M itens" e filtros (#14)
 -   [x] **13.4.** Escaneamento Individual e em Lotes com Sala (#15)
 -   [x] **13.5.** Importar / Exportar e Relatório de alterações (#16)
--   [x] **13.6.** Gerenciar Dados e Cache e Sobre, sem atualização de APK (#17)
+-   [x] **13.6.** Gerenciar Dados e Cache e Sobre, sem verificação de atualização (#17)
