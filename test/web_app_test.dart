@@ -147,14 +147,19 @@ void main() {
     await tester.enterText(find.byType(TextField).at(1), password);
     await tester.tap(find.text('Entrar'));
     await tester.pumpAndSettle();
-    expect(find.text('Mesa de teste'), findsOneWidget);
+    expect(find.text('Última sincronização'), findsOneWidget);
     expect(find.text(username), findsOneWidget);
+    await tester.tap(find.text('Ver Inventário'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mesa de teste'), findsOneWidget);
     expect(find.text('Relatório de conferência'), findsOneWidget);
 
     await tester.tap(find.text('Relatório de conferência'));
     await tester.pumpAndSettle();
     expect(find.text('Total'), findsWidgets);
     expect(find.text('Conferidos'), findsWidgets);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
 
