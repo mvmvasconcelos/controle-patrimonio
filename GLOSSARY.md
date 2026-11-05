@@ -23,3 +23,11 @@ _Avoid_: Sync, atualização
 **Administrador**:
 O único papel de acesso: o usuário autenticado tem permissão total.
 _Avoid_: Usuário comum, operador
+
+**Sala**:
+O local físico onde um patrimônio deve estar, conforme o cadastro. Na conferência, a sala informada pelo usuário é comparada com a do cadastro, e a decisão sobre qualquer divergência é dele.
+_Avoid_: Local, localização
+
+**Escaneamento**:
+O nome que a interface dá à Conferência, individual ou em lotes.
+_Avoid_: Leitura, checagem
