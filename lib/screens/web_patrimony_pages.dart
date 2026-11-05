@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'conference_room_selection.dart';
+import 'inventory_search_dialog.dart';
 import '../services/web_inventory_repository.dart';
 import '../services/web_photo_picker.dart';
 import '../widgets/barcode_scanner_screen.dart';
@@ -593,6 +594,17 @@ class _WebConferenciaPageState extends State<WebConferenciaPage> {
     if (mounted) setState(() => _busy = false);
   }
 
+  Future<void> _searchManually() async {
+    final entry = await showInventorySearchDialog(
+      context: context,
+      repository: widget.repository,
+      initialQuery: _number.text,
+    );
+    if (entry == null || !mounted) return;
+    _number.text = entry.number;
+    await _confirm(entry.number);
+  }
+
   Future<void> _scan() async {
     final scan = widget.scanBarcode ?? scanWithCamera;
     String? value;
@@ -651,7 +663,7 @@ class _WebConferenciaPageState extends State<WebConferenciaPage> {
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: _busy ? null : () => _confirm(_number.text),
+                onPressed: _busy ? null : _searchManually,
                 icon: const Icon(Icons.search),
                 label: const Text('Pesquisar manualmente'),
               ),

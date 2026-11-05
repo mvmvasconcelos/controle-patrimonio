@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 
+import 'support/inventory_search_test_helpers.dart';
+
 class _RoomRepository extends WebInventoryRepository {
   _RoomRepository()
       : super(client: MockClient((_) async => throw StateError('Unexpected')));
@@ -26,11 +28,39 @@ class _RoomRepository extends WebInventoryRepository {
     ),
   };
   final checked = <String>[];
+  final queries = <String?>[];
   final updates = <Map<String, String?>>[];
 
   @override
   Future<InventoryFilters> fetchFilters() async =>
       const InventoryFilters(rooms: ['Sala A', 'Sala B'], statuses: ['Ativo']);
+
+  @override
+  Future<InventoryPage> fetchInventory({
+    String? query,
+    String? room,
+    String? status,
+    bool? checked,
+    int offset = 0,
+    int limit = 50,
+  }) async {
+    queries.add(query);
+    final term = query?.toLowerCase();
+    var result = entries.values.toList();
+    if (term != null && term.isNotEmpty) {
+      result = result
+          .where((entry) =>
+              entry.number.toLowerCase().contains(term) ||
+              entry.description.toLowerCase().contains(term))
+          .toList();
+    }
+    if (room != null)
+      result = result.where((entry) => entry.room == room).toList();
+    return InventoryPage(
+      total: result.length,
+      items: result.skip(offset).take(limit).toList(),
+    );
+  }
 
   @override
   Future<InventoryEntry?> fetchEntry(String number) async => entries[number];
@@ -106,11 +136,10 @@ void main() {
     await _open(tester, WebConferenciaPage(repository: repository));
     await _chooseRoom(tester, 'Sala A');
 
-    await tester.enterText(find.byType(TextField), '100');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
+    await searchAndChoosePatrimony(tester, query: "100", number: "100");
 
     expect(repository.checked, ['100']);
+    expect(repository.queries, ['100']);
     expect(find.textContaining('Sala correta: Sala A'), findsOneWidget);
     expect(repository.entries['100']!.room, 'Sala A');
   });
@@ -124,9 +153,7 @@ void main() {
     await _open(tester, WebConferenciaPage(repository: repository));
     await _chooseRoom(tester, 'Sala A');
 
-    await tester.enterText(find.byType(TextField), '200');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
+    await searchAndChoosePatrimony(tester, query: "200", number: "200");
     expect(find.text('Sala divergente'), findsOneWidget);
     expect(find.textContaining("Sala B"), findsWidgets);
 
@@ -149,15 +176,11 @@ void main() {
     await _open(tester, WebBatchConferenciaPage(repository: repository));
     await _chooseRoom(tester, 'Sala A');
 
-    final number = find.byType(TextField);
-    await tester.enterText(number, '100');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
-    expect(find.text('Sala correta: Sala A.'), findsOneWidget);
+    await searchAndChoosePatrimony(tester, query: "100", number: "100");
+    expect(find.text("Sala correta: Sala A."), findsOneWidget);
 
-    await tester.enterText(number, '200');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
+    await searchAndChoosePatrimony(tester, query: "200", number: "200");
+    expect(find.text("Sala divergente"), findsOneWidget);
     expect(find.text('Sala divergente'), findsOneWidget);
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
