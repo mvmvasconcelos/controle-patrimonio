@@ -260,4 +260,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Total: 1'), findsOneWidget);
   });
+
+  testWidgets('menu abre Gerenciar Dados e Cache e Sobre', (tester) async {
+    final repository = _FakeRepository('u', 'p');
+    await tester.pumpWidget(MyApp(webRepository: repository));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'u');
+    await tester.enterText(find.byType(TextField).at(1), 'p');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Gerenciar Dados e Cache'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ações de risco'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Sobre'));
+    await tester.pumpAndSettle();
+    expect(find.text('Data do build'), findsOneWidget);
+    expect(find.byType(AboutDialog), findsNothing);
+  });
 }
