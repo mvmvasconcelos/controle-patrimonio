@@ -7,18 +7,23 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/batch_feedback_stub.dart'
     if (dart.library.html) '../services/batch_feedback_web.dart';
 import '../services/web_inventory_repository.dart';
-import 'web_patrimony_pages.dart' show BarcodeScanner, errorMessage;
+import 'conference_room_selection.dart';
+import 'inventory_search_dialog.dart';
+import 'web_patrimony_pages.dart'
+    show BarcodeScanner, WebPatrimonyDetailPage, errorMessage;
 
 enum _BatchOutcome { success, duplicate, notFound, error }
 
 class _BatchResult {
   const _BatchResult({
     required this.number,
+    this.roomStatus,
     required this.message,
     required this.outcome,
   });
 
   final String number;
+  final String? roomStatus;
   final String message;
   final _BatchOutcome outcome;
 }
@@ -42,6 +47,8 @@ class WebBatchConferenciaPage extends StatefulWidget {
 
 class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
   final _number = TextEditingController();
+  String? _selectedRoom;
+  bool _roomDialogScheduled = false;
   final _scanner = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
@@ -52,6 +59,19 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
   bool _cameraProcessing = false;
   String? _cameraError;
   String? _feedbackError;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_roomDialogScheduled) return;
+    _roomDialogScheduled = true;
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => unawaited(_selectRoom()));
+  }
+
+  Future<void> _selectRoom() async {
+    final room = await selectConferenceRoom(context, widget.repository);
+    if (mounted) setState(() => _selectedRoom = room);
+  }
 
   bool get _cameraAvailable =>
       !kIsWeb ||
@@ -65,6 +85,17 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
     _scanner.dispose();
     unawaited(_feedback.dispose());
     super.dispose();
+  }
+
+  Future<void> _searchManually() async {
+    final entry = await showInventorySearchDialog(
+      context: context,
+      repository: widget.repository,
+      initialQuery: _number.text,
+    );
+    if (entry == null || !mounted) return;
+    _number.text = entry.number;
+    await _record(entry.number);
   }
 
   Future<void> _record(String raw) async {
@@ -88,13 +119,44 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
 
     late final _BatchResult result;
     late final BatchFeedbackKind sound;
+    String? roomStatus;
     try {
       final response = await widget.repository.markChecked(number);
+      InventoryEntry? entry;
+      try {
+        entry = await widget.repository.fetchEntry(number);
+      } catch (_) {}
+      if (!mounted) return;
+      if (_selectedRoom != null && entry != null) {
+        if (entry.room.trim() == _selectedRoom) {
+          roomStatus = 'Sala correta: ${entry.room}.';
+        } else {
+          roomStatus =
+              'Sala divergente: cadastrada na ${entry.room.isEmpty ? 'sem Sala' : entry.room}. '
+              'Sala selecionada: $_selectedRoom.';
+          final correctRoom = await confirmRoomCorrection(
+            context,
+            number: number,
+            expectedRoom: _selectedRoom!,
+            actualRoom: entry.room.isEmpty ? 'sem Sala' : entry.room,
+          );
+          if (correctRoom && mounted) {
+            await _openEntry(entry);
+            try {
+              final updated = await widget.repository.fetchEntry(number);
+              if (updated != null && updated.room.trim() == _selectedRoom) {
+                roomStatus = 'Sala corrigida para ${updated.room}.';
+              }
+            } catch (_) {}
+          }
+        }
+      }
       if (response.repeated) {
         result = _BatchResult(
           number: number,
           message: 'Duplicado: Patrimônio $number já tinha uma Conferência.',
           outcome: _BatchOutcome.duplicate,
+          roomStatus: roomStatus,
         );
         sound = BatchFeedbackKind.duplicate;
       } else {
@@ -102,6 +164,7 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
           number: number,
           message: 'Conferência registrada: Patrimônio $number.',
           outcome: _BatchOutcome.success,
+          roomStatus: roomStatus,
         );
         sound = BatchFeedbackKind.success;
       }
@@ -142,6 +205,15 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
         _showFeedbackError();
       }
     }
+  }
+
+  Future<void> _openEntry(InventoryEntry entry) async {
+    await Navigator.of(context).push<void>(MaterialPageRoute(
+      builder: (_) => WebPatrimonyDetailPage(
+        repository: widget.repository,
+        entry: entry,
+      ),
+    ));
   }
 
   void _showFeedbackError() {
@@ -198,6 +270,8 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Text('Sala: ${_selectedRoom ?? 'Não informada'}'),
+              const SizedBox(height: 12),
               TextField(
                 controller: _number,
                 autofocus: true,
@@ -209,27 +283,26 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
                 onSubmitted: _record,
               ),
               const SizedBox(height: 8),
-              FilledButton.icon(
-                onPressed: _busy ? null : () => _record(_number.text),
-                icon: const Icon(Icons.fact_check),
-                label: const Text('Registrar Conferência'),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _searchManually,
+                icon: const Icon(Icons.search),
+                label: const Text('Pesquisar manualmente'),
               ),
               const SizedBox(height: 8),
               if (_cameraAvailable && widget.scanBarcode != null)
-                OutlinedButton.icon(
+                FilledButton.icon(
                   onPressed: _busy ? null : _scanOnce,
                   icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Escanear com a câmera'),
+                  label: const Text('Escanear'),
                 )
               else if (_cameraAvailable)
-                OutlinedButton.icon(
+                FilledButton.icon(
                   onPressed: _busy
                       ? null
                       : () => setState(() => _cameraActive = !_cameraActive),
                   icon:
                       Icon(_cameraActive ? Icons.videocam_off : Icons.videocam),
-                  label:
-                      Text(_cameraActive ? 'Parar câmera' : 'Iniciar câmera'),
+                  label: Text(_cameraActive ? 'Parar câmera' : 'Escanear'),
                 )
               else
                 const Text('A câmera exige HTTPS. Use a digitação manual.'),
@@ -262,8 +335,7 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
                   content: Text(_feedbackError!),
                   actions: [
                     TextButton(
-                      onPressed: () =>
-                          setState(() => _feedbackError = null),
+                      onPressed: () => setState(() => _feedbackError = null),
                       child: const Text('Dispensar'),
                     ),
                   ],
@@ -280,7 +352,21 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
                         _color(result.outcome, Theme.of(context).colorScheme),
                   ),
                   title: Text(result.message),
-                  subtitle: Text('Patrimônio ${result.number}'),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Patrimônio ${result.number}'),
+                      if (result.roomStatus != null)
+                        Text(
+                          result.roomStatus!,
+                          style: TextStyle(
+                            color: result.roomStatus!.startsWith('Sala correta')
+                                ? Colors.green.shade700
+                                : Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
             ],
           ),

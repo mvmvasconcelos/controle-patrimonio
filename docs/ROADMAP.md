@@ -9,7 +9,7 @@ otimizando a coleta de dados e a posterior atualização no sistema SUAP.
 
 O app funcionará como uma "prancheta digital", permitindo ao usuário escanear itens de forma individual ou em lote, identificar rapidamente inconsistências de localização, editar informações e registrar novos itens não catalogados. A funcionalidade mais importante é a geração de um relatório final, em formato de planilha, que consolida **apenas os itens que sofreram alterações**, destacando as células modificadas para facilitar e agilizar a etapa de atualização manual no SUAP.
 
-No estado atual do projeto, o fluxo **offline por planilha** permanece como prioridade operacional. O backend segue como suporte e evolucao para sincronizacao progressiva (incluindo fotos de itens), sem quebrar o fluxo offline durante a transicao.
+O produto é um webapp offline-first: o backend (FastAPI + SQLite) é a fonte de verdade e o navegador mantém um cache offline em IndexedDB para salas sem cobertura. A distribuição atual é exclusivamente web.
 
 ---
 
@@ -30,17 +30,17 @@ No estado atual do projeto, o fluxo **offline por planilha** permanece como prio
 
 ---
 
-### Etapa 2: Estrutura Base do Aplicativo Flutter
+### Etapa 2: Estrutura Base do Webapp Flutter
 
-**Objetivo:** Criar a estrutura fundamental do app com armazenamento offline.
+**Objetivo:** Criar a estrutura fundamental do webapp com cache offline.
 
--   [x] **2.1. Configuração do Banco de Dados Local**
-    -   [x] **2.1.1.** Implementar banco de dados local (Hive) para armazenar os dados do patrimônio
-    -   [x] **2.1.2.** Garantir funcionamento 100% offline do aplicativo
+-   [x] **2.1. Cache Offline**
+    -   [x] **2.1.1.** Manter cache local no navegador (IndexedDB) com fila de sincronização
+    -   [x] **2.1.2.** Garantir uso em salas sem cobertura de rede
 
 -   [x] **2.2. Tela Principal**
-    -   [x] **2.2.1.** Criar tela principal com dois botões: **"Escaneamento Individual"** e **"Escaneamento em Lotes"**
-    -   [x] **2.2.2.** Implementar popup "Deseja informar qual é a sala?" com `input select` antes de iniciar o scanner
+    -   [x] **2.2.1.** Criar tela inicial com os atalhos **"Escaneamento Individual"**, **"Escaneamento em Lotes"** e **"Ver Inventário"**
+    -   [x] **2.2.2.** Implementar diálogo "Deseja informar qual é a sala?" (opcional) antes de iniciar o escaneamento
 
 ---
 
@@ -49,7 +49,7 @@ No estado atual do projeto, o fluxo **offline por planilha** permanece como prio
 **Objetivo:** Integrar e configurar o scanner de código de barras com feedback adequado.
 
 -   [x] **3.1. Integração do Scanner**
-    -   [x] **3.1.1.** Integrar e adaptar o scanner de código de barras (`barcode-scanner`)
+    -   [x] **3.1.1.** Integrar o scanner de código de barras pela câmera do navegador
 
 -   [x] **3.2. Feedback Sonoro e Háptico**
     -   [x] **3.2.1.** Implementar feedback para sucesso (item novo escaneado)
@@ -99,7 +99,7 @@ No estado atual do projeto, o fluxo **offline por planilha** permanece como prio
 **Objetivo:** Registrar todas as modificações feitas nos itens para gerar relatórios precisos.
 
 -   [x] **6.1. Sistema de Tracking no App**
-    -   [x] **6.1.1.** Ao clicar em "Atualizar Item", salvar não apenas o novo estado, mas também quais campos foram alterados
+    -   [x] **6.1.1.** Ao clicar em "Atualizar Item", registrar não apenas o novo estado, mas também quais campos foram alterados
     -   [x] **6.1.2.** Armazenar formato de alteração: `campo: 'valor_antigo' -> 'valor_novo'`
 
 ---
@@ -139,7 +139,7 @@ No estado atual do projeto, o fluxo **offline por planilha** permanece como prio
     -   [x] **8.2.1.** Coletar todos os itens que foram marcados como modificados
     -   [x] **8.2.2.** Gerar arquivo `.xlsx` com a mesma estrutura e colunas da planilha original do SUAP
     -   [x] **8.2.3.** **Funcionalidade Chave:** Destacar (com cor de fundo) as células específicas que sofreram alteração
-    -   [x] **8.2.4.** Permitir que o usuário abra/compartilhe este arquivo
+    -   [x] **8.2.4.** Permitir que o usuário baixe este arquivo pelo navegador
 
 ---
 
@@ -172,7 +172,7 @@ No estado atual do projeto, o fluxo **offline por planilha** permanece como prio
 
 -   [x] **10.3. Visualização**
     -   [x] **10.3.1.** Exibir foto do item no modal e na visualização de detalhe
-    -   [x] **10.3.2.** Implementar cache/armazenamento local de imagens para visualização offline
+    -   [x] **10.3.2.** Implementar cache local de imagens no navegador para visualização offline
 
 ---
 
@@ -196,5 +196,20 @@ No estado atual do projeto, o fluxo **offline por planilha** permanece como prio
 -   [ ] **12.1. Tela Inicial Aprimorada**
     -   [ ] **12.1.1.** Criar dashboard simples com métricas úteis
     -   [ ] **12.1.2.** Exibir "Itens atualizados hoje"
-    -   [ ] **12.1.3.** Exibir "Última sincronização com SUAP"
+    -   [x] **12.1.3.** Exibir "Última sincronização" (cartão da tela inicial)
     -   [ ] **12.1.4.** Adicionar outras métricas relevantes para o usuário
+
+---
+
+### Etapa 13: Paridade Visual com o Aplicativo Nativo Anterior
+
+**Objetivo:** Levar o webapp ao visual e às funções do aplicativo nativo anterior (spec #11).
+
+**Status de fechamento:** Desenvolvida e testada; falta a revisão visual do usuário em build web.
+
+-   [x] **13.1.** Tema verde do IFSul, favicon/ícones PWA e menu lateral (#12)
+-   [x] **13.2.** Tela inicial com cartão de sincronização e atalhos (#13)
+-   [x] **13.3.** Inventário com busca, contador "N de M itens" e filtros (#14)
+-   [x] **13.4.** Escaneamento Individual e em Lotes com Sala (#15)
+-   [x] **13.5.** Importar / Exportar e Relatório de alterações (#16)
+-   [x] **13.6.** Gerenciar Dados e Cache e Sobre, sem verificação de atualização (#17)

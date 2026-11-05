@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/web_inventory_repository.dart';
+import '../theme.dart';
 
 class WebConferenceReportPage extends StatefulWidget {
   const WebConferenceReportPage({
@@ -22,6 +23,8 @@ class _WebConferenceReportPageState extends State<WebConferenceReportPage> {
   String? _situation;
   String? _error;
   bool _loading = true;
+  List<ChangedItem>? _changeItems;
+  String? _changesError;
   int _requestGeneration = 0;
 
   @override
@@ -29,6 +32,16 @@ class _WebConferenceReportPageState extends State<WebConferenceReportPage> {
     super.initState();
     _loadFilters();
     _loadReport();
+    _loadChanges();
+  }
+
+  Future<void> _loadChanges() async {
+    try {
+      final changes = await widget.repository.fetchChanges();
+      if (mounted) setState(() => _changeItems = changes);
+    } catch (error) {
+      if (mounted) setState(() => _changesError = _message(error));
+    }
   }
 
   Future<void> _loadFilters() async {
@@ -123,15 +136,104 @@ class _WebConferenceReportPageState extends State<WebConferenceReportPage> {
         ),
       );
 
-  Widget _totals(ConferenceReport report) => Wrap(
-        spacing: 16,
-        runSpacing: 12,
-        children: [
-          Text('Total: ${report.total}'),
-          Text('Conferidos: ${report.checked}'),
-          Text('Pendentes: ${report.pending}'),
-        ],
+  Widget _totals(ConferenceReport report) => Card(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: _ReportStat(
+                  icon: Icons.inventory_2,
+                  label: 'Total',
+                  value: report.total,
+                ),
+              ),
+              Expanded(
+                child: _ReportStat(
+                  icon: Icons.check_circle,
+                  label: 'Conferidos',
+                  value: report.checked,
+                ),
+              ),
+              Expanded(
+                child: _ReportStat(
+                  icon: Icons.pending_actions,
+                  label: 'Pendentes',
+                  value: report.pending,
+                  color: Colors.orange,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
+
+  Widget _changes() {
+    final changes = _changeItems;
+    final primary = Theme.of(context).colorScheme.primary;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.edit_note, color: primary),
+            const SizedBox(width: 8),
+            Text(
+              'Patrimônios modificados',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: primary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_changesError != null)
+          Text(
+            _changesError!,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          )
+        else if (changes == null)
+          const LinearProgressIndicator()
+        else if (changes.isEmpty)
+          const Text('Nenhum patrimônio modificado.')
+        else
+          Card(
+            margin: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (final item in changes)
+                  ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.amber.shade100,
+                      child:
+                          const Icon(Icons.edit, color: Colors.amber, size: 18),
+                    ),
+                    title: Text('${item.number} · ${item.description}'),
+                    subtitle: Text(item.room),
+                    trailing: Wrap(
+                      spacing: 8,
+                      children: [
+                        if (item.checked)
+                          Icon(Icons.check_circle, color: primary, size: 20),
+                        if (item.photos > 0)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.photo_camera, size: 18),
+                              Text(' ${item.photos}'),
+                            ],
+                          ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
 
   Widget _groups(ConferenceReport report) {
     if (report.groups.isEmpty) {
@@ -141,28 +243,31 @@ class _WebConferenceReportPageState extends State<WebConferenceReportPage> {
             Text('Nenhum patrimônio encontrado para os filtros selecionados.'),
       );
     }
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: const [
-          DataColumn(label: Text('Sala')),
-          DataColumn(label: Text('Situação patrimonial')),
-          DataColumn(label: Text('Total')),
-          DataColumn(label: Text('Conferidos')),
-          DataColumn(label: Text('Pendentes')),
-        ],
-        rows: [
-          for (final group in report.groups)
-            DataRow(
-              cells: [
-                DataCell(Text(group.room)),
-                DataCell(Text(group.situation)),
-                DataCell(Text('${group.total}')),
-                DataCell(Text('${group.checked}')),
-                DataCell(Text('${group.pending}')),
-              ],
-            ),
-        ],
+    return Card(
+      margin: EdgeInsets.zero,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columns: const [
+            DataColumn(label: Text('Sala')),
+            DataColumn(label: Text('Situação patrimonial')),
+            DataColumn(label: Text('Total')),
+            DataColumn(label: Text('Conferidos')),
+            DataColumn(label: Text('Pendentes')),
+          ],
+          rows: [
+            for (final group in report.groups)
+              DataRow(
+                cells: [
+                  DataCell(Text(group.room)),
+                  DataCell(Text(group.situation)),
+                  DataCell(Text('${group.total}')),
+                  DataCell(Text('${group.checked}')),
+                  DataCell(Text('${group.pending}')),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -171,39 +276,77 @@ class _WebConferenceReportPageState extends State<WebConferenceReportPage> {
   Widget build(BuildContext context) {
     final report = _report;
     return Scaffold(
-      appBar: AppBar(title: const Text('Relatório de conferência')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [_roomFilter(), _situationFilter()],
-            ),
-            const SizedBox(height: 20),
-            if (_error != null)
-              MaterialBanner(
-                content: Text(_error!),
-                actions: [
-                  TextButton(
-                    onPressed: _loadReport,
-                    child: const Text('Tentar novamente'),
-                  ),
-                ],
+      appBar: AppBar(title: const Text('Relatório de alterações')),
+      body: CenteredColumn(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [_roomFilter(), _situationFilter()],
               ),
-            if (_loading && report == null)
-              const Center(child: CircularProgressIndicator())
-            else if (report != null) ...[
-              _totals(report),
-              const SizedBox(height: 12),
-              if (_loading) const LinearProgressIndicator(),
-              _groups(report),
+              const SizedBox(height: 20),
+              if (_error != null)
+                MaterialBanner(
+                  content: Text(_error!),
+                  actions: [
+                    TextButton(
+                      onPressed: _loadReport,
+                      child: const Text('Tentar novamente'),
+                    ),
+                  ],
+                ),
+              if (_loading && report == null)
+                const Center(child: CircularProgressIndicator())
+              else if (report != null) ...[
+                _totals(report),
+                const SizedBox(height: 12),
+                if (_loading) const LinearProgressIndicator(),
+                _groups(report),
+              ],
+              const SizedBox(height: 24),
+              _changes(),
             ],
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _ReportStat extends StatelessWidget {
+  const _ReportStat({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final int value;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = color ?? Theme.of(context).colorScheme.primary;
+    return Column(
+      children: [
+        Icon(icon, color: tint),
+        const SizedBox(height: 4),
+        Text(
+          '$value',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: tint,
+          ),
+        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      ],
     );
   }
 }

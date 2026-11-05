@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../services/file_download.dart';
 import '../services/web_inventory_repository.dart';
+import '../theme.dart';
 import '../widgets/sync_status_bar.dart';
-import 'web_data_management_page.dart';
+import 'web_about_page.dart';
+import 'web_cache_management_page.dart';
+import 'web_conference_report.dart';
+import 'inventory_file.dart';
+import 'web_home_page.dart';
+import 'web_import_export_page.dart';
 import 'web_inventory_list.dart';
 import 'web_patrimony_pages.dart';
 
-export 'web_data_management_page.dart' show PickedInventoryFile;
+export 'inventory_file.dart' show PickedInventoryFile;
 export 'web_patrimony_pages.dart' show BarcodeScanner;
 
 class WebApp extends StatefulWidget {
@@ -110,16 +116,46 @@ class _WebAppState extends State<WebApp> {
     }
   }
 
-  void _openDataManagement() {
+  void _openImportExport() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => WebDataManagementPage(
+        builder: (_) => WebImportExportPage(
           repository: _repository,
           pickFile: widget.pickInventoryFile ?? pickInventoryFileFromBrowser,
           saveDownload: widget.saveDownload ?? saveDownloadedFile,
           onImported: () async {
             if (mounted) setState(() => _inventoryVersion++);
           },
+          onOpenInventory: _openInventory,
+        ),
+      ),
+    );
+  }
+
+  void _openCacheManagement() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => WebCacheManagementPage(
+          repository: _repository,
+          onChanged: () {
+            if (mounted) setState(() => _inventoryVersion++);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _openInventory() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('Inventário')),
+          body: CenteredColumn(
+            child: WebInventoryList(
+              repository: _repository,
+              scanBarcode: widget.scanBarcode,
+            ),
+          ),
         ),
       ),
     );
@@ -212,7 +248,7 @@ class _WebAppState extends State<WebApp> {
   Widget _buildInventory() {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Inventário'),
+        title: const Text('Início'),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -227,39 +263,115 @@ class _WebAppState extends State<WebApp> {
             ),
           ),
           IconButton(
-            tooltip: 'Gestão de dados',
-            onPressed: _openDataManagement,
-            icon: const Icon(Icons.storage),
-          ),
-          IconButton(
             tooltip: 'Sair',
             onPressed: _logout,
             icon: const Icon(Icons.logout),
           ),
         ],
       ),
-      body: Column(
+      drawer: _buildDrawer(),
+      body: CenteredColumn(
+        child: Column(
+          children: [
+            SyncStatusBar(
+              repository: _repository,
+              onSessionExpired: () => setState(() => _session = null),
+            ),
+            if (_error != null)
+              MaterialBanner(
+                content: Text(_error!),
+                actions: [
+                  TextButton(
+                    onPressed: () => setState(() => _error = null),
+                    child: const Text('Fechar'),
+                  ),
+                ],
+              ),
+            Expanded(
+              child: WebHomePage(
+                key: ValueKey(_inventoryVersion),
+                repository: _repository,
+                scanBarcode: widget.scanBarcode,
+                onOpenInventory: _openInventory,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openFromDrawer(VoidCallback action) {
+    Navigator.of(context).pop();
+    action();
+  }
+
+  Widget _buildDrawer() {
+    final scheme = Theme.of(context).colorScheme;
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
         children: [
-          SyncStatusBar(
-            repository: _repository,
-            onSessionExpired: () => setState(() => _session = null),
-          ),
-          if (_error != null)
-            MaterialBanner(
-              content: Text(_error!),
-              actions: [
-                TextButton(
-                  onPressed: () => setState(() => _error = null),
-                  child: const Text('Fechar'),
+          DrawerHeader(
+            decoration: BoxDecoration(color: scheme.primary),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(Icons.archive, color: scheme.onPrimary, size: 40),
+                const SizedBox(height: 8),
+                Text(
+                  'Controle Patrimônio',
+                  style: TextStyle(
+                    color: scheme.onPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                Text('IFSUL', style: TextStyle(color: scheme.onPrimary)),
               ],
             ),
-          Expanded(
-            child: WebInventoryList(
-              key: ValueKey(_inventoryVersion),
-              repository: _repository,
-              scanBarcode: widget.scanBarcode,
-            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.list_alt),
+            title: const Text('Inventário'),
+            onTap: () => _openFromDrawer(_openInventory),
+          ),
+          ListTile(
+            leading: const Icon(Icons.upload_file),
+            title: const Text('Importar / Exportar'),
+            onTap: () => _openFromDrawer(_openImportExport),
+          ),
+          ListTile(
+            leading: const Icon(Icons.table_chart),
+            title: const Text('Relatório de alterações'),
+            onTap: () => _openFromDrawer(() {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      WebConferenceReportPage(repository: _repository),
+                ),
+              );
+            }),
+          ),
+          ListTile(
+            leading: const Icon(Icons.sync),
+            title: const Text('Sincronizar com servidor'),
+            onTap: () => _openFromDrawer(_repository.synchronize),
+          ),
+          ListTile(
+            leading: const Icon(Icons.storage),
+            title: const Text('Gerenciar Dados e Cache'),
+            onTap: () => _openFromDrawer(_openCacheManagement),
+          ),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Sobre'),
+            onTap: () => _openFromDrawer(() {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const WebAboutPage()),
+              );
+            }),
           ),
         ],
       ),

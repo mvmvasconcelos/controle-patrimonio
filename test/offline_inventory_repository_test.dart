@@ -45,6 +45,9 @@ class _FaultInjectingStore implements OfflineStore {
   Future<List<CachedPhoto>> photos(String number) => delegate.photos(number);
 
   @override
+  Future<List<CachedPhoto>> allPhotos() => delegate.allPhotos();
+
+  @override
   Future<Uint8List?> photoBytes(String number, int id) =>
       delegate.photoBytes(number, id);
 
@@ -403,6 +406,24 @@ void main() {
       expect((await repo.fetchPhotos('102')).single.id, 50);
     });
 
+    test('restoreSyncedPhotos baixa as fotos do servidor que faltam no cache',
+        () async {
+      server.photos['100'] = {7: _jpeg(100)};
+      server.photos['101'] = {8: _jpeg(100), 9: _jpeg(100)};
+      expect(await repo.restoreSyncedPhotos(), 3);
+      expect(await store.photos('101'), hasLength(2));
+      expect(await repo.restoreSyncedPhotos(), 0);
+    });
+
+    test('cleanOrphanPhotos remove fotos de patrimônios fora do Inventário',
+        () async {
+      await store.putPhoto('999', 5, _jpeg(100), pending: false);
+      await store.putPhoto('100', 6, _jpeg(100), pending: false);
+      expect(await repo.cleanOrphanPhotos(), 1);
+      expect(await store.photos('999'), isEmpty);
+      expect(await store.photos('100'), hasLength(1));
+    });
+
     test('offline limit of 3 photos per Patrimônio is enforced', () async {
       server.down = true;
       network.set(false);
@@ -481,5 +502,65 @@ void main() {
     final entry = await repo.updateEntry('100', {'sala': 'Direta'});
     expect(entry.room, 'Direta');
     expect(server.editedAt['100'], DateTime.utc(2026, 3, 1, 10));
+  });
+
+  test('local data stats count cached Patrimônios and pending changes',
+      () async {
+    server.down = true;
+    network.set(false);
+    await repo.markChecked('101');
+    await repo.updateEntry('101', {'sala': 'Sala C'});
+    final stats = await repo.localDataStats();
+    expect(stats.total, 3);
+    expect(stats.modified, 1);
+  });
+
+  test('resetLocalChanges drops pending changes and restores the server state',
+      () async {
+    server.down = true;
+    await repo.markChecked('101');
+    await repo.updateEntry('100', {'sala': 'Direta'});
+    server.down = false;
+    await repo.resetLocalChanges();
+    expect(repo.syncStatus.pending, 0);
+    await settle();
+
+    expect(repo.syncStatus.pending, 0);
+    expect(server.rows['101']!['conferido'], isFalse);
+    expect((await repo.fetchEntry('101'))!.checked, isFalse);
+    expect((await repo.fetchEntry('100'))!.room, 'Sala A');
+    expect((await repo.localDataStats()).modified, 0);
+  });
+
+  test('resetLocalChanges offline keeps pending changes and cached Patrimônios',
+      () async {
+    server.down = true;
+    network.set(false);
+    await repo.markChecked('101');
+
+    await expectLater(
+      repo.resetLocalChanges(),
+      throwsA(isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        contains('conexão'),
+      )),
+    );
+
+    expect(repo.syncStatus.pending, 1);
+    expect((await repo.fetchEntry('101'))!.checked, isTrue);
+  });
+
+  test('clearLocalData empties entries and the queue', () async {
+    server.down = true;
+    network.set(false);
+    await repo.markChecked('101');
+    await repo.clearLocalData();
+
+    expect(await store.entries(), isEmpty);
+    expect(await store.pendingOperations(), isEmpty);
+    expect(repo.syncStatus.pending, 0);
+    final stats = await repo.localDataStats();
+    expect((stats.total, stats.modified), (0, 0));
   });
 }

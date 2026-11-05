@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
+import 'package:controle_patrimonio/main.dart';
 import 'package:controle_patrimonio/screens/web_app.dart';
 import 'package:controle_patrimonio/services/offline/sync_status.dart';
 import 'package:controle_patrimonio/services/web_inventory_repository.dart';
@@ -146,14 +147,19 @@ void main() {
     await tester.enterText(find.byType(TextField).at(1), password);
     await tester.tap(find.text('Entrar'));
     await tester.pumpAndSettle();
-    expect(find.text('Mesa de teste'), findsOneWidget);
+    expect(find.text('Última sincronização'), findsOneWidget);
     expect(find.text(username), findsOneWidget);
+    await tester.tap(find.text('Ver Inventário'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mesa de teste'), findsOneWidget);
     expect(find.text('Relatório de conferência'), findsOneWidget);
 
     await tester.tap(find.text('Relatório de conferência'));
     await tester.pumpAndSettle();
-    expect(find.text('Total: 1'), findsOneWidget);
-    expect(find.text('Conferidos: 1'), findsOneWidget);
+    expect(find.text('Total'), findsWidgets);
+    expect(find.text('Conferidos'), findsWidgets);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
 
@@ -162,8 +168,11 @@ void main() {
     expect(find.text('Acesso do Administrador'), findsOneWidget);
   });
 
-  testWidgets('data management imports, shows summary and downloads exports',
+  testWidgets('imports only through the confirmed Importar / Exportar path',
       (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final repository = _FakeRepository('u', 'p');
     final downloads = <String>[];
     await tester.pumpWidget(
@@ -182,26 +191,28 @@ void main() {
     await tester.tap(find.text('Entrar'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Gestão de dados'));
+    expect(find.byTooltip('Gestão de dados'), findsNothing);
+    await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
-    expect(find.text('Gestão de dados'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ListTile, 'Importar / Exportar'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(AppBar, 'Importar / Exportar'), findsOneWidget);
 
-    await tester.tap(find.text('Importar Inventário'));
+    await tester.tap(find.text('Selecionar arquivo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Atenção'), findsOneWidget);
+    expect(repository.importedNames, isEmpty);
+    await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
     expect(repository.importedNames, ['inv.csv']);
     expect(find.text('Novos: 3'), findsOneWidget);
     expect(find.text('Atualizados: 2'), findsOneWidget);
     expect(find.text('Com erro: 1'), findsOneWidget);
     expect(find.text('Linha 5: Descrição ausente'), findsOneWidget);
-
-    await tester.tap(find.text('Exportar alterações'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Exportar relatório'));
-    await tester.pumpAndSettle();
-    expect(downloads, ['alteracoes.csv', 'relatorio.csv']);
   });
 
-  testWidgets('connection indicator is visible and expired session returns to login',
+  testWidgets(
+      'connection indicator is visible and expired session returns to login',
       (tester) async {
     final repository = _FakeRepository('u', 'p');
     await tester.pumpWidget(MaterialApp(home: WebApp(repository: repository)));
@@ -212,8 +223,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Online'), findsOneWidget);
 
-    repository.statusController.add(
-        const SyncStatus(online: false, pending: 2, sessionExpired: true));
+    repository.statusController
+        .add(const SyncStatus(online: false, pending: 2, sessionExpired: true));
     await tester.pumpAndSettle();
     expect(find.text('Offline'), findsOneWidget);
     expect(find.text('2 pendências'), findsOneWidget);
@@ -221,5 +232,83 @@ void main() {
     await tester.tap(find.text('Entrar novamente'));
     await tester.pumpAndSettle();
     expect(find.text('Acesso do Administrador'), findsOneWidget);
+  });
+
+  testWidgets('MyApp usa tema verde e o menu lateral lista os destinos',
+      (tester) async {
+    final repository = _FakeRepository('u', 'p');
+    await tester.pumpWidget(MyApp(webRepository: repository));
+    await tester.pumpAndSettle();
+
+    final primary =
+        Theme.of(tester.element(find.byType(Scaffold))).colorScheme.primary;
+    expect(primary.g, greaterThan(primary.b));
+    expect(primary.g, greaterThan(primary.r));
+
+    await tester.enterText(find.byType(TextField).at(0), 'u');
+    await tester.enterText(find.byType(TextField).at(1), 'p');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Controle Patrimônio'), findsOneWidget);
+    expect(find.text('IFSUL'), findsOneWidget);
+    for (final item in [
+      'Inventário',
+      'Importar / Exportar',
+      'Relatório de alterações',
+      'Sincronizar com servidor',
+      'Gerenciar Dados e Cache',
+      'Sobre',
+    ]) {
+      expect(find.widgetWithText(ListTile, item), findsOneWidget, reason: item);
+    }
+
+    await tester.tap(find.widgetWithText(ListTile, 'Relatório de alterações'));
+    await tester.pumpAndSettle();
+    expect(find.text('Total'), findsWidgets);
+  });
+
+  testWidgets('menu Importar / Exportar abre a tela própria', (tester) async {
+    final repository = _FakeRepository('u', 'p');
+    await tester.pumpWidget(MyApp(webRepository: repository));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'u');
+    await tester.enterText(find.byType(TextField).at(1), 'p');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Importar / Exportar'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(AppBar, 'Importar / Exportar'), findsOneWidget);
+    expect(find.text('Gestão de dados'), findsNothing);
+  });
+
+  testWidgets('menu abre Gerenciar Dados e Cache e Sobre', (tester) async {
+    final repository = _FakeRepository('u', 'p');
+    await tester.pumpWidget(MyApp(webRepository: repository));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'u');
+    await tester.enterText(find.byType(TextField).at(1), 'p');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Gerenciar Dados e Cache'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ações de risco'), findsOneWidget);
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Sobre'));
+    await tester.pumpAndSettle();
+    expect(find.text('Data do build'), findsOneWidget);
+    expect(find.byType(AboutDialog), findsNothing);
   });
 }

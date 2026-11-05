@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'conference_room_selection.dart';
+import 'inventory_search_dialog.dart';
 import '../services/web_inventory_repository.dart';
 import '../services/web_photo_picker.dart';
 import '../widgets/barcode_scanner_screen.dart';
@@ -121,8 +125,8 @@ class _WebPatrimonyDetailPageState extends State<WebPatrimonyDetailPage> {
             Flexible(
               child: InteractiveViewer(
                 maxScale: 5,
-                child: _PhotoImage(
-                    bytes: _bytesFor(photo), fit: BoxFit.contain),
+                child:
+                    _PhotoImage(bytes: _bytesFor(photo), fit: BoxFit.contain),
               ),
             ),
             OverflowBar(
@@ -164,7 +168,8 @@ class _WebPatrimonyDetailPageState extends State<WebPatrimonyDetailPage> {
   }
 
   Future<Uint8List> _bytesFor(PatrimonyPhoto photo) => _photoBytes.putIfAbsent(
-      photo.id, () => widget.repository.fetchPhotoBytes(_entry.number, photo.id));
+      photo.id,
+      () => widget.repository.fetchPhotoBytes(_entry.number, photo.id));
 
   Widget _photosSection(BuildContext context) {
     final atLimit = _photos.length >= maxPhotosPerPatrimony;
@@ -493,10 +498,26 @@ class WebConferenciaPage extends StatefulWidget {
 
 class _WebConferenciaPageState extends State<WebConferenciaPage> {
   final _number = TextEditingController();
+  String? _selectedRoom;
+  bool _roomDialogScheduled = false;
   bool _busy = false;
   String? _success;
   String? _error;
   String? _unknownNumber;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_roomDialogScheduled) return;
+    _roomDialogScheduled = true;
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => unawaited(_selectRoom()));
+  }
+
+  Future<void> _selectRoom() async {
+    final room = await selectConferenceRoom(context, widget.repository);
+    if (mounted) setState(() => _selectedRoom = room);
+  }
 
   // A câmera no navegador só funciona em contexto seguro (HTTPS ou localhost).
   bool get _cameraAvailable =>
@@ -526,7 +547,44 @@ class _WebConferenciaPageState extends State<WebConferenciaPage> {
     });
     try {
       await widget.repository.markChecked(number);
-      _success = 'Patrimônio $number conferido.';
+      InventoryEntry? entry;
+      try {
+        entry = await widget.repository.fetchEntry(number);
+      } catch (_) {}
+      if (!mounted) return;
+      if (_selectedRoom != null && entry != null) {
+        if (entry.room.trim() == _selectedRoom) {
+          _success =
+              'Patrimônio $number conferido. Sala correta: ${entry.room}.';
+        } else {
+          _success =
+              'Patrimônio $number conferido. Sala divergente: cadastro em '
+              '${entry.room.isEmpty ? 'sem Sala' : entry.room}.';
+          final correctRoom = await confirmRoomCorrection(
+            context,
+            number: number,
+            expectedRoom: _selectedRoom!,
+            actualRoom: entry.room.isEmpty ? 'sem Sala' : entry.room,
+          );
+          if (correctRoom && mounted) {
+            await Navigator.of(context).push<void>(MaterialPageRoute(
+              builder: (_) => WebPatrimonyDetailPage(
+                repository: widget.repository,
+                entry: entry!,
+              ),
+            ));
+            try {
+              final updated = await widget.repository.fetchEntry(number);
+              if (updated != null && updated.room.trim() == _selectedRoom) {
+                _success =
+                    'Patrimônio $number conferido. Sala corrigida para ${updated.room}.';
+              }
+            } catch (_) {}
+          }
+        }
+      } else {
+        _success = 'Patrimônio $number conferido.';
+      }
       _number.clear();
     } on PatrimonyNotFoundException {
       _unknownNumber = number;
@@ -534,6 +592,17 @@ class _WebConferenciaPageState extends State<WebConferenciaPage> {
       _error = errorMessage(error);
     }
     if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _searchManually() async {
+    final entry = await showInventorySearchDialog(
+      context: context,
+      repository: widget.repository,
+      initialQuery: _number.text,
+    );
+    if (entry == null || !mounted) return;
+    _number.text = entry.number;
+    await _confirm(entry.number);
   }
 
   Future<void> _scan() async {
@@ -580,6 +649,8 @@ class _WebConferenciaPageState extends State<WebConferenciaPage> {
           child: ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Text('Sala: ${_selectedRoom ?? 'Não informada'}'),
+              const SizedBox(height: 12),
               TextField(
                 controller: _number,
                 autofocus: true,
@@ -591,16 +662,16 @@ class _WebConferenciaPageState extends State<WebConferenciaPage> {
                 onSubmitted: _confirm,
               ),
               const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: _busy ? null : () => _confirm(_number.text),
-                icon: const Icon(Icons.fact_check),
-                label: const Text('Conferir'),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _searchManually,
+                icon: const Icon(Icons.search),
+                label: const Text('Pesquisar manualmente'),
               ),
               const SizedBox(height: 8),
-              OutlinedButton.icon(
+              FilledButton.icon(
                 onPressed: _busy || !_cameraAvailable ? null : _scan,
                 icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('Escanear com a câmera'),
+                label: const Text('Escanear'),
               ),
               if (!_cameraAvailable)
                 const Padding(
