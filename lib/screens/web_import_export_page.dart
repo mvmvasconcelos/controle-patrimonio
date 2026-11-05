@@ -70,8 +70,8 @@ class _WebImportExportPageState extends State<WebImportExportPage> {
         builder: (context) => AlertDialog(
           title: const Text('Atenção'),
           content: const Text(
-            'Importar uma nova planilha vai substituir os dados atuais.\n\n'
-            'Modificações ainda não exportadas serão perdidas.\n\n'
+            'A importação insere novos patrimônios e atualiza os existentes.\n'
+            'A importação não remove os patrimônios ausentes do arquivo nem altera conferências ou fotos existentes.\n\n'
             'Deseja continuar?',
           ),
           actions: [
@@ -222,7 +222,7 @@ class _WebImportExportPageState extends State<WebImportExportPage> {
             const SizedBox(height: 8),
             const _Hint(
               'Selecione o arquivo exportado do SUAP (.csv, .xls ou .xlsx). '
-              'Os dados atuais serão substituídos.',
+              'Novos patrimônios são inseridos e os existentes atualizados. A importação não remove os patrimônios ausentes do arquivo nem altera conferências ou fotos existentes.',
             ),
             const SizedBox(height: 12),
             FilledButton.icon(

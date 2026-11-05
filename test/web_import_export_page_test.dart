@@ -122,20 +122,25 @@ void main() {
     expect(downloads, ['saida.csv', 'saida.xlsx']);
   });
 
-  testWidgets('importar avisa da substituição e só importa ao confirmar',
+  testWidgets(
+      'importar explica a atualização e preservação e só importa ao confirmar',
       (tester) async {
     final repository = _Repository();
     await _open(tester, repository);
-    expect(find.textContaining("serão substituídos"), findsOneWidget);
+    expect(
+        find.textContaining("patrimônios ausentes do arquivo"), findsOneWidget);
 
     await tester.tap(find.text('Selecionar arquivo'));
     await tester.pumpAndSettle();
     expect(find.text('Atenção'), findsOneWidget);
-    await tester.tap(find.text('Cancelar'));
+    expect(find.textContaining("nem altera conferências ou fotos existentes"),
+        findsNWidgets(2));
+    await tester.tap(find.text("Cancelar"));
     await tester.pumpAndSettle();
     expect(repository.imported, isEmpty);
 
-    await tester.tap(find.text('Selecionar arquivo'));
+    await tester.tap(find.text("Selecionar arquivo"));
+    await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
