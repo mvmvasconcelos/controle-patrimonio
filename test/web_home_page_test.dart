@@ -81,7 +81,8 @@ void main() {
     final repository = _HomeRepository();
     await _pump(tester, repository);
 
-    repository.controller.add(SyncStatus(lastSyncAt: DateTime(2026, 1, 2, 3, 4)));
+    repository.controller
+        .add(SyncStatus(lastSyncAt: DateTime(2026, 1, 2, 3, 4)));
     await tester.pumpAndSettle();
 
     expect(find.text('02/01/2026 03:04'), findsOneWidget);
@@ -95,11 +96,15 @@ void main() {
 
     await tester.tap(find.text('Escaneamento Individual'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Não'));
+    await tester.pumpAndSettle();
     expect(find.widgetWithText(AppBar, 'Conferência'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Escaneamento em Lotes'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Não'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(AppBar, 'Conferência em lote'), findsOneWidget);
     await tester.pageBack();
@@ -124,8 +129,7 @@ void main() {
     expect(repository.syncCalls, 1);
   });
 
-  testWidgets('Descartar esconde a falha até que outra ocorra',
-      (tester) async {
+  testWidgets('Descartar esconde a falha até que outra ocorra', (tester) async {
     final repository = _HomeRepository(
       status: const SyncStatus(lastError: 'Servidor indisponível'),
     );
