@@ -91,6 +91,7 @@ abstract class OfflineStore {
   Future<void> removeEntries(Iterable<String> numbers);
 
   Future<List<CachedPhoto>> photos(String number);
+  Future<List<CachedPhoto>> allPhotos();
   Future<Uint8List?> photoBytes(String number, int id);
 
   /// Fotos pendentes nunca são descartadas: se não couberem, lança
@@ -187,6 +188,11 @@ class HiveOfflineStore implements OfflineStore {
         if (key.startsWith(prefix)) _cachedPhoto(key),
     ]..sort((a, b) => a.id.compareTo(b.id));
   }
+
+  @override
+  Future<List<CachedPhoto>> allPhotos() async => [
+        for (final key in _index.keys.cast<String>()) _cachedPhoto(key),
+      ];
 
   CachedPhoto _cachedPhoto(String key) {
     final json = _indexJson(key);
