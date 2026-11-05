@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
+import 'package:controle_patrimonio/main.dart';
 import 'package:controle_patrimonio/screens/web_app.dart';
 import 'package:controle_patrimonio/services/offline/sync_status.dart';
 import 'package:controle_patrimonio/services/web_inventory_repository.dart';
@@ -201,7 +202,8 @@ void main() {
     expect(downloads, ['alteracoes.csv', 'relatorio.csv']);
   });
 
-  testWidgets('connection indicator is visible and expired session returns to login',
+  testWidgets(
+      'connection indicator is visible and expired session returns to login',
       (tester) async {
     final repository = _FakeRepository('u', 'p');
     await tester.pumpWidget(MaterialApp(home: WebApp(repository: repository)));
@@ -212,8 +214,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Online'), findsOneWidget);
 
-    repository.statusController.add(
-        const SyncStatus(online: false, pending: 2, sessionExpired: true));
+    repository.statusController
+        .add(const SyncStatus(online: false, pending: 2, sessionExpired: true));
     await tester.pumpAndSettle();
     expect(find.text('Offline'), findsOneWidget);
     expect(find.text('2 pendências'), findsOneWidget);
@@ -221,5 +223,41 @@ void main() {
     await tester.tap(find.text('Entrar novamente'));
     await tester.pumpAndSettle();
     expect(find.text('Acesso do Administrador'), findsOneWidget);
+  });
+
+  testWidgets('MyApp usa tema verde e o menu lateral lista os destinos',
+      (tester) async {
+    final repository = _FakeRepository('u', 'p');
+    await tester.pumpWidget(MyApp(webRepository: repository));
+    await tester.pumpAndSettle();
+
+    final primary =
+        Theme.of(tester.element(find.byType(Scaffold))).colorScheme.primary;
+    expect(primary.g, greaterThan(primary.b));
+    expect(primary.g, greaterThan(primary.r));
+
+    await tester.enterText(find.byType(TextField).at(0), 'u');
+    await tester.enterText(find.byType(TextField).at(1), 'p');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    expect(find.text('Controle Patrimônio'), findsOneWidget);
+    expect(find.text('IFSUL'), findsOneWidget);
+    for (final item in [
+      'Inventário',
+      'Importar / Exportar',
+      'Relatório de alterações',
+      'Sincronizar com servidor',
+      'Gerenciar Dados e Cache',
+      'Sobre',
+    ]) {
+      expect(find.widgetWithText(ListTile, item), findsOneWidget, reason: item);
+    }
+
+    await tester.tap(find.widgetWithText(ListTile, 'Relatório de alterações'));
+    await tester.pumpAndSettle();
+    expect(find.text('Total: 1'), findsOneWidget);
   });
 }

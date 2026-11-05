@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'screens/web_app.dart';
+import 'theme.dart';
 import 'services/offline/offline_inventory_repository.dart';
 import 'services/offline/offline_store.dart';
 import 'services/web_inventory_repository.dart';
@@ -35,10 +36,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Controle Patrimonial',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
+      theme: buildAppTheme(),
       home: WebApp(repository: webRepository),
     );
   }
