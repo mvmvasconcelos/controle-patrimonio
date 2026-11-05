@@ -1,6 +1,8 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
+import '../theme.dart';
+
 import '../services/web_inventory_repository.dart';
 
 class PickedInventoryFile {
@@ -71,7 +73,8 @@ class _WebDataManagementPageState extends State<WebDataManagementPage> {
         await widget.onImported?.call();
       });
 
-  Future<void> _export(Future<DownloadedFile> Function() load) => _run(() async {
+  Future<void> _export(Future<DownloadedFile> Function() load) =>
+      _run(() async {
         await widget.saveDownload(await load());
       });
 
@@ -80,63 +83,67 @@ class _WebDataManagementPageState extends State<WebDataManagementPage> {
     final summary = _summary;
     return Scaffold(
       appBar: AppBar(title: const Text('Gestão de dados')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('Inventário', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          const Text(
-            'Envie o Inventário do SUAP (CSV, XLS ou XLSX). Conferências e '
-            'fotos existentes são preservadas.',
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              FilledButton.icon(
-                onPressed: _busy ? null : _import,
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Importar Inventário'),
-              ),
-              OutlinedButton.icon(
-                onPressed:
-                    _busy ? null : () => _export(widget.repository.exportChanges),
-                icon: const Icon(Icons.download),
-                label: const Text('Exportar alterações'),
-              ),
-              OutlinedButton.icon(
-                onPressed:
-                    _busy ? null : () => _export(widget.repository.exportReport),
-                icon: const Icon(Icons.assessment),
-                label: const Text('Exportar relatório'),
+      body: CenteredColumn(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Text('Inventário', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            const Text(
+              'Envie o Inventário do SUAP (CSV, XLS ou XLSX). Conferências e '
+              'fotos existentes são preservadas.',
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                FilledButton.icon(
+                  onPressed: _busy ? null : _import,
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Importar Inventário'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () => _export(widget.repository.exportChanges),
+                  icon: const Icon(Icons.download),
+                  label: const Text('Exportar alterações'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () => _export(widget.repository.exportReport),
+                  icon: const Icon(Icons.assessment),
+                  label: const Text('Exportar relatório'),
+                ),
+              ],
+            ),
+            if (_busy) ...[
+              const SizedBox(height: 16),
+              const LinearProgressIndicator(),
+            ],
+            if (_error != null) ...[
+              const SizedBox(height: 16),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
-          ),
-          if (_busy) ...[
-            const SizedBox(height: 16),
-            const LinearProgressIndicator(),
+            if (summary != null) ...[
+              const SizedBox(height: 24),
+              Text('Resumo da importação',
+                  style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text('Novos: ${summary.created}'),
+              Text('Atualizados: ${summary.updated}'),
+              Text('Sem alteração: ${summary.unchanged}'),
+              Text('Com erro: ${summary.errors.length}'),
+              for (final error in summary.errors)
+                Text('Linha ${error.line}: ${error.message}'),
+            ],
           ],
-          if (_error != null) ...[
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ],
-          if (summary != null) ...[
-            const SizedBox(height: 24),
-            Text('Resumo da importação',
-                style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text('Novos: ${summary.created}'),
-            Text('Atualizados: ${summary.updated}'),
-            Text('Sem alteração: ${summary.unchanged}'),
-            Text('Com erro: ${summary.errors.length}'),
-            for (final error in summary.errors)
-              Text('Linha ${error.line}: ${error.message}'),
-          ],
-        ],
+        ),
       ),
     );
   }

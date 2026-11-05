@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/web_inventory_repository.dart';
+import '../theme.dart';
 
 class WebConferenceReportPage extends StatefulWidget {
   const WebConferenceReportPage({
@@ -172,36 +173,38 @@ class _WebConferenceReportPageState extends State<WebConferenceReportPage> {
     final report = _report;
     return Scaffold(
       appBar: AppBar(title: const Text('Relatório de conferência')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [_roomFilter(), _situationFilter()],
-            ),
-            const SizedBox(height: 20),
-            if (_error != null)
-              MaterialBanner(
-                content: Text(_error!),
-                actions: [
-                  TextButton(
-                    onPressed: _loadReport,
-                    child: const Text('Tentar novamente'),
-                  ),
-                ],
+      body: CenteredColumn(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [_roomFilter(), _situationFilter()],
               ),
-            if (_loading && report == null)
-              const Center(child: CircularProgressIndicator())
-            else if (report != null) ...[
-              _totals(report),
-              const SizedBox(height: 12),
-              if (_loading) const LinearProgressIndicator(),
-              _groups(report),
+              const SizedBox(height: 20),
+              if (_error != null)
+                MaterialBanner(
+                  content: Text(_error!),
+                  actions: [
+                    TextButton(
+                      onPressed: _loadReport,
+                      child: const Text('Tentar novamente'),
+                    ),
+                  ],
+                ),
+              if (_loading && report == null)
+                const Center(child: CircularProgressIndicator())
+              else if (report != null) ...[
+                _totals(report),
+                const SizedBox(height: 12),
+                if (_loading) const LinearProgressIndicator(),
+                _groups(report),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

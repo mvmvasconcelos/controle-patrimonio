@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../services/file_download.dart';
 import '../services/web_inventory_repository.dart';
+import '../theme.dart';
 import '../widgets/sync_status_bar.dart';
+import 'web_conference_report.dart';
 import 'web_data_management_page.dart';
 import 'web_inventory_list.dart';
 import 'web_patrimony_pages.dart';
@@ -238,28 +240,108 @@ class _WebAppState extends State<WebApp> {
           ),
         ],
       ),
-      body: Column(
+      drawer: _buildDrawer(),
+      body: CenteredColumn(
+        child: Column(
+          children: [
+            SyncStatusBar(
+              repository: _repository,
+              onSessionExpired: () => setState(() => _session = null),
+            ),
+            if (_error != null)
+              MaterialBanner(
+                content: Text(_error!),
+                actions: [
+                  TextButton(
+                    onPressed: () => setState(() => _error = null),
+                    child: const Text('Fechar'),
+                  ),
+                ],
+              ),
+            Expanded(
+              child: WebInventoryList(
+                key: ValueKey(_inventoryVersion),
+                repository: _repository,
+                scanBarcode: widget.scanBarcode,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openFromDrawer(VoidCallback action) {
+    Navigator.of(context).pop();
+    action();
+  }
+
+  Widget _buildDrawer() {
+    final scheme = Theme.of(context).colorScheme;
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
         children: [
-          SyncStatusBar(
-            repository: _repository,
-            onSessionExpired: () => setState(() => _session = null),
-          ),
-          if (_error != null)
-            MaterialBanner(
-              content: Text(_error!),
-              actions: [
-                TextButton(
-                  onPressed: () => setState(() => _error = null),
-                  child: const Text('Fechar'),
+          DrawerHeader(
+            decoration: BoxDecoration(color: scheme.primary),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Icon(Icons.archive, color: scheme.onPrimary, size: 40),
+                const SizedBox(height: 8),
+                Text(
+                  'Controle Patrimônio',
+                  style: TextStyle(
+                    color: scheme.onPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                Text('IFSUL', style: TextStyle(color: scheme.onPrimary)),
               ],
             ),
-          Expanded(
-            child: WebInventoryList(
-              key: ValueKey(_inventoryVersion),
-              repository: _repository,
-              scanBarcode: widget.scanBarcode,
-            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.list_alt),
+            title: const Text('Inventário'),
+            onTap: () => Navigator.of(context).pop(),
+          ),
+          ListTile(
+            leading: const Icon(Icons.upload_file),
+            title: const Text('Importar / Exportar'),
+            onTap: () => _openFromDrawer(_openDataManagement),
+          ),
+          ListTile(
+            leading: const Icon(Icons.table_chart),
+            title: const Text('Relatório de alterações'),
+            onTap: () => _openFromDrawer(() {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      WebConferenceReportPage(repository: _repository),
+                ),
+              );
+            }),
+          ),
+          ListTile(
+            leading: const Icon(Icons.sync),
+            title: const Text('Sincronizar com servidor'),
+            onTap: () => _openFromDrawer(_repository.synchronize),
+          ),
+          ListTile(
+            leading: const Icon(Icons.storage),
+            title: const Text('Gerenciar Dados e Cache'),
+            onTap: () => _openFromDrawer(_openDataManagement),
+          ),
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Sobre'),
+            onTap: () => _openFromDrawer(() => showAboutDialog(
+                  context: context,
+                  applicationName: 'Controle Patrimônio',
+                  applicationLegalese: 'IFSUL',
+                )),
           ),
         ],
       ),
