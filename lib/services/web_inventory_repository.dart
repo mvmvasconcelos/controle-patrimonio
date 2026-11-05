@@ -150,6 +150,16 @@ class InventoryFilters {
   final List<String> statuses;
 }
 
+class LocalDataStats {
+  const LocalDataStats({required this.total, required this.modified});
+
+  /// Patrimônios do Inventário guardados no dispositivo.
+  final int total;
+
+  /// Alterações locais ainda não enviadas ao servidor.
+  final int modified;
+}
+
 class ConferenceReport {
   const ConferenceReport({
     required this.total,
@@ -294,6 +304,14 @@ class WebInventoryRepository {
   Stream<SyncStatus> get syncStatusChanges => const Stream.empty();
 
   Future<SyncStatus> synchronize() async => syncStatus;
+
+  /// Sem cache offline, não há dados locais a contar nem a descartar.
+  Future<LocalDataStats> localDataStats() async =>
+      const LocalDataStats(total: 0, modified: 0);
+
+  Future<void> resetLocalChanges() async {}
+
+  Future<void> clearLocalData() async {}
 
   Future<AdminSession?> restoreSession() async {
     final response = await _client.get(_uri('auth/me'));

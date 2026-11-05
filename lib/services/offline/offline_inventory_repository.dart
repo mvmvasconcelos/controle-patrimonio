@@ -214,6 +214,52 @@ class OfflineInventoryRepository implements WebInventoryRepository {
       (await store.pendingOperations()).map((o) => o.number).toSet();
 
   @override
+  Future<LocalDataStats> localDataStats() async => LocalDataStats(
+        total: (await store.entries()).length,
+        modified: (await store.pendingOperations()).length,
+      );
+
+  /// Descarta a fila de alterações locais e baixa de novo o estado do
+  /// servidor para os Patrimônios afetados.
+  @override
+  Future<void> resetLocalChanges() async {
+    final ops = await store.pendingOperations();
+    final numbers = ops.map((o) => o.number).toSet();
+    for (final op in ops) {
+      await store.removeOperation(op.id!);
+    }
+    for (final number in numbers) {
+      for (final photo in await store.photos(number)) {
+        if (photo.pending) await store.removePhoto(number, photo.id);
+      }
+    }
+    await store.removeEntries(numbers);
+    await _publish();
+    await synchronize();
+  }
+
+  /// Apaga Patrimônios, fotos e fila guardados no dispositivo; o servidor
+  /// não é alterado.
+  @override
+  Future<void> clearLocalData() async {
+    final ops = await store.pendingOperations();
+    for (final op in ops) {
+      await store.removeOperation(op.id!);
+    }
+    final numbers = {
+      ...(await store.entries()).map((e) => e.number),
+      ...ops.map((o) => o.number),
+    };
+    for (final number in numbers) {
+      for (final photo in await store.photos(number)) {
+        await store.removePhoto(number, photo.id);
+      }
+    }
+    await store.removeEntries(numbers);
+    await _publish();
+  }
+
+  @override
   Future<List<InventoryEntry>> loadInventory() => _read(
         remote.loadInventory,
         () async => _sorted(await store.entries()),
