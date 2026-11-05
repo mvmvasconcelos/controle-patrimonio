@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/web_inventory_repository.dart';
 import '../theme.dart';
-import 'web_data_management_page.dart';
+import 'inventory_file.dart';
 
 class WebImportExportPage extends StatefulWidget {
   const WebImportExportPage({

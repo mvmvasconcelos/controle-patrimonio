@@ -1,4 +1,4 @@
-import 'package:controle_patrimonio/screens/web_data_management_page.dart';
+import 'package:controle_patrimonio/screens/inventory_file.dart';
 import 'package:controle_patrimonio/screens/web_import_export_page.dart';
 import 'package:controle_patrimonio/services/web_inventory_repository.dart';
 import 'package:flutter/material.dart';

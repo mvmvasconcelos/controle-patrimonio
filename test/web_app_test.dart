@@ -168,8 +168,11 @@ void main() {
     expect(find.text('Acesso do Administrador'), findsOneWidget);
   });
 
-  testWidgets('data management imports, shows summary and downloads exports',
+  testWidgets('imports only through the confirmed Importar / Exportar path',
       (tester) async {
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final repository = _FakeRepository('u', 'p');
     final downloads = <String>[];
     await tester.pumpWidget(
@@ -188,23 +191,24 @@ void main() {
     await tester.tap(find.text('Entrar'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Gestão de dados'));
+    expect(find.byTooltip('Gestão de dados'), findsNothing);
+    await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
-    expect(find.text('Gestão de dados'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ListTile, 'Importar / Exportar'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(AppBar, 'Importar / Exportar'), findsOneWidget);
 
-    await tester.tap(find.text('Importar Inventário'));
+    await tester.tap(find.text('Selecionar arquivo'));
+    await tester.pumpAndSettle();
+    expect(find.text('Atenção'), findsOneWidget);
+    expect(repository.importedNames, isEmpty);
+    await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();
     expect(repository.importedNames, ['inv.csv']);
     expect(find.text('Novos: 3'), findsOneWidget);
     expect(find.text('Atualizados: 2'), findsOneWidget);
     expect(find.text('Com erro: 1'), findsOneWidget);
     expect(find.text('Linha 5: Descrição ausente'), findsOneWidget);
-
-    await tester.tap(find.text('Exportar alterações'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Exportar relatório'));
-    await tester.pumpAndSettle();
-    expect(downloads, ['alteracoes.csv', 'relatorio.csv']);
   });
 
   testWidgets(
