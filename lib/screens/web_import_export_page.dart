@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/web_inventory_repository.dart';
 import '../theme.dart';
-import 'web_data_management_page.dart';
+import 'inventory_file.dart';
 
 class WebImportExportPage extends StatefulWidget {
   const WebImportExportPage({
@@ -70,8 +70,8 @@ class _WebImportExportPageState extends State<WebImportExportPage> {
         builder: (context) => AlertDialog(
           title: const Text('Atenção'),
           content: const Text(
-            'Importar uma nova planilha vai substituir os dados atuais.\n\n'
-            'Modificações ainda não exportadas serão perdidas.\n\n'
+            'A importação insere novos patrimônios e atualiza os existentes.\n'
+            'A importação não remove os patrimônios ausentes do arquivo nem altera conferências ou fotos existentes.\n\n'
             'Deseja continuar?',
           ),
           actions: [
@@ -131,6 +131,9 @@ class _WebImportExportPageState extends State<WebImportExportPage> {
     final totals = _totals;
     final total = totals?.total ?? 0;
     final modified = totals?.modified ?? 0;
+    final modifiedCount =
+        modified == 1 ? '1 patrimônio' : '$modified patrimônios';
+    final totalCount = total == 1 ? '1 patrimônio' : '$total patrimônios';
     final summary = _summary;
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
@@ -222,7 +225,7 @@ class _WebImportExportPageState extends State<WebImportExportPage> {
             const SizedBox(height: 8),
             const _Hint(
               'Selecione o arquivo exportado do SUAP (.csv, .xls ou .xlsx). '
-              'Os dados atuais serão substituídos.',
+              'Novos patrimônios são inseridos e os existentes atualizados. A importação não remove os patrimônios ausentes do arquivo nem altera conferências ou fotos existentes.',
             ),
             const SizedBox(height: 12),
             FilledButton.icon(
@@ -273,9 +276,10 @@ class _WebImportExportPageState extends State<WebImportExportPage> {
             const SizedBox(height: 12),
             _ExportOption(
               icon: Icons.edit_note,
-              title: 'Somente itens modificados',
-              description: 'Exporta apenas os $modified item(ns) alterado(s), '
-                  'conferido(s) ou com foto. Ideal para atualização pontual.',
+              title: 'Somente patrimônios modificados',
+              description:
+                  'Exporta patrimônios modificados, conferidos ou com foto. '
+                  'Total: $modifiedCount. Ideal para atualização pontual.',
               enabled: !_busy && modified > 0,
               onTap: () => _export(onlyModified: true),
             ),
@@ -283,7 +287,8 @@ class _WebImportExportPageState extends State<WebImportExportPage> {
             _ExportOption(
               icon: Icons.table_chart,
               title: 'Planilha completa',
-              description: 'Exporta todos os $total item(ns) com a coluna '
+              description:
+                  'Exporta o Inventário completo ($totalCount), com a coluna '
                   '"ATUALIZADO_EM" preenchida apenas onde houve alteração.',
               enabled: !_busy && total > 0,
               onTap: () => _export(onlyModified: false),

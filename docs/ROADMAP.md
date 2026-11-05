@@ -9,7 +9,7 @@ otimizando a coleta de dados e a posterior atualização no sistema SUAP.
 
 O app funcionará como uma "prancheta digital", permitindo ao usuário escanear itens de forma individual ou em lote, identificar rapidamente inconsistências de localização, editar informações e registrar novos itens não catalogados. A funcionalidade mais importante é a geração de um relatório final, em formato de planilha, que consolida **apenas os itens que sofreram alterações**, destacando as células modificadas para facilitar e agilizar a etapa de atualização manual no SUAP.
 
-O produto é um webapp offline-first: o backend (FastAPI + SQLite) é a fonte de verdade e o navegador mantém um cache offline em IndexedDB para salas sem cobertura. O APK Android não é mais suportado (ver `docs/adr/0001-webapp-offline-first-substitui-apk.md`).
+O produto é um webapp offline-first: o backend (FastAPI + SQLite) é a fonte de verdade e o navegador mantém um cache offline em IndexedDB para salas sem cobertura. A distribuição atual é exclusivamente web.
 
 ---
 

@@ -8,6 +8,7 @@ import '../services/batch_feedback_stub.dart'
     if (dart.library.html) '../services/batch_feedback_web.dart';
 import '../services/web_inventory_repository.dart';
 import 'conference_room_selection.dart';
+import 'inventory_search_dialog.dart';
 import 'web_patrimony_pages.dart'
     show BarcodeScanner, WebPatrimonyDetailPage, errorMessage;
 
@@ -84,6 +85,17 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
     _scanner.dispose();
     unawaited(_feedback.dispose());
     super.dispose();
+  }
+
+  Future<void> _searchManually() async {
+    final entry = await showInventorySearchDialog(
+      context: context,
+      repository: widget.repository,
+      initialQuery: _number.text,
+    );
+    if (entry == null || !mounted) return;
+    _number.text = entry.number;
+    await _record(entry.number);
   }
 
   Future<void> _record(String raw) async {
@@ -272,7 +284,7 @@ class _WebBatchConferenciaPageState extends State<WebBatchConferenciaPage> {
               ),
               const SizedBox(height: 8),
               OutlinedButton.icon(
-                onPressed: _busy ? null : () => _record(_number.text),
+                onPressed: _busy ? null : _searchManually,
                 icon: const Icon(Icons.search),
                 label: const Text('Pesquisar manualmente'),
               ),

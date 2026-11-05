@@ -7,13 +7,13 @@ import '../widgets/sync_status_bar.dart';
 import 'web_about_page.dart';
 import 'web_cache_management_page.dart';
 import 'web_conference_report.dart';
-import 'web_data_management_page.dart';
+import 'inventory_file.dart';
 import 'web_home_page.dart';
 import 'web_import_export_page.dart';
 import 'web_inventory_list.dart';
 import 'web_patrimony_pages.dart';
 
-export 'web_data_management_page.dart' show PickedInventoryFile;
+export 'inventory_file.dart' show PickedInventoryFile;
 export 'web_patrimony_pages.dart' show BarcodeScanner;
 
 class WebApp extends StatefulWidget {
@@ -114,21 +114,6 @@ class _WebAppState extends State<WebApp> {
     if (mounted) {
       setState(() => _isLoading = false);
     }
-  }
-
-  void _openDataManagement() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => WebDataManagementPage(
-          repository: _repository,
-          pickFile: widget.pickInventoryFile ?? pickInventoryFileFromBrowser,
-          saveDownload: widget.saveDownload ?? saveDownloadedFile,
-          onImported: () async {
-            if (mounted) setState(() => _inventoryVersion++);
-          },
-        ),
-      ),
-    );
   }
 
   void _openImportExport() {
@@ -276,11 +261,6 @@ class _WebAppState extends State<WebApp> {
                 ),
               ),
             ),
-          ),
-          IconButton(
-            tooltip: 'Gestão de dados',
-            onPressed: _openDataManagement,
-            icon: const Icon(Icons.storage),
           ),
           IconButton(
             tooltip: 'Sair',

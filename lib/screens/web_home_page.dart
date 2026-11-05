@@ -94,8 +94,8 @@ class _WebHomePageState extends State<WebHomePage> {
                     : _formatDate(lastSync)),
                 if (count != null)
                   Text(count == 1
-                      ? '1 item carregado'
-                      : '$count itens carregados'),
+                      ? '1 patrimônio carregado'
+                      : '$count patrimônios carregados'),
               ],
             ),
           ),

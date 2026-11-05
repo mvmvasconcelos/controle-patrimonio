@@ -1,4 +1,4 @@
-import 'package:controle_patrimonio/screens/web_data_management_page.dart';
+import 'package:controle_patrimonio/screens/inventory_file.dart';
 import 'package:controle_patrimonio/screens/web_import_export_page.dart';
 import 'package:controle_patrimonio/services/web_inventory_repository.dart';
 import 'package:flutter/material.dart';
@@ -92,7 +92,8 @@ void main() {
   testWidgets('exportar só modificados fica desabilitado sem modificações',
       (tester) async {
     await _open(tester, _Repository(modified: 0));
-    final card = find.widgetWithText(ListTile, 'Somente itens modificados');
+    final card =
+        find.widgetWithText(ListTile, 'Somente patrimônios modificados');
     expect(tester.widget<ListTile>(card).enabled, isFalse);
     expect(
         tester
@@ -107,10 +108,11 @@ void main() {
     final repository = _Repository(modified: 2);
     final downloads = <String>[];
     await _open(tester, repository, downloads: downloads);
+    expect(find.textContaining('Total: 2 patrimônios'), findsOneWidget);
 
     await tester.tap(find.text('.csv'));
     await tester.pump();
-    await tester.tap(find.text('Somente itens modificados'));
+    await tester.tap(find.text('Somente patrimônios modificados'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('.xlsx'));
     await tester.pump();
@@ -122,20 +124,25 @@ void main() {
     expect(downloads, ['saida.csv', 'saida.xlsx']);
   });
 
-  testWidgets('importar avisa da substituição e só importa ao confirmar',
+  testWidgets(
+      'importar explica a atualização e preservação e só importa ao confirmar',
       (tester) async {
     final repository = _Repository();
     await _open(tester, repository);
-    expect(find.textContaining("serão substituídos"), findsOneWidget);
+    expect(
+        find.textContaining("patrimônios ausentes do arquivo"), findsOneWidget);
 
     await tester.tap(find.text('Selecionar arquivo'));
     await tester.pumpAndSettle();
     expect(find.text('Atenção'), findsOneWidget);
-    await tester.tap(find.text('Cancelar'));
+    expect(find.textContaining("nem altera conferências ou fotos existentes"),
+        findsNWidgets(2));
+    await tester.tap(find.text("Cancelar"));
     await tester.pumpAndSettle();
     expect(repository.imported, isEmpty);
 
-    await tester.tap(find.text('Selecionar arquivo'));
+    await tester.tap(find.text("Selecionar arquivo"));
+    await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continuar'));
     await tester.pumpAndSettle();

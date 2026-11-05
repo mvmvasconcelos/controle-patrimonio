@@ -66,14 +66,14 @@ void main() {
 
     expect(find.text('Última sincronização'), findsOneWidget);
     expect(find.text('07/03/2026 09:05'), findsOneWidget);
-    expect(find.text('42 itens carregados'), findsOneWidget);
+    expect(find.text('42 patrimônios carregados'), findsOneWidget);
   });
 
   testWidgets('sem Sincronização anterior o cartão avisa', (tester) async {
     await _pump(tester, _HomeRepository(total: 1));
 
     expect(find.text('Nunca sincronizado'), findsOneWidget);
-    expect(find.text('1 item carregado'), findsOneWidget);
+    expect(find.text('1 patrimônio carregado'), findsOneWidget);
   });
 
   testWidgets('cartão atualiza depois de uma nova Sincronização',

@@ -73,7 +73,7 @@ void main() {
           find.descendant(of: stats, matching: find.text(text)), findsOneWidget,
           reason: text);
     }
-    expect(find.text('Itens modificados'), findsOneWidget);
+    expect(find.text('Patrimônios modificados'), findsOneWidget);
     expect(find.text('101 · Mesa'), findsOneWidget);
     expect(find.text('Sala A'), findsOneWidget);
     expect(find.text('Ativo'), findsOneWidget);

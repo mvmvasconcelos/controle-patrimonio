@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/testing.dart';
 
+import 'support/inventory_search_test_helpers.dart';
+
 class _Repository extends WebInventoryRepository {
   _Repository()
       : super(
@@ -72,7 +74,13 @@ class _Repository extends WebInventoryRepository {
     queries.add({'query': query, 'room': room, 'checked': checked});
     var list = entries.values.map(_view).toList();
     if (query != null && query.isNotEmpty) {
-      list = list.where((e) => e.description.contains(query)).toList();
+      final term = query.toLowerCase();
+      list = list
+          .where((e) =>
+              e.number.toLowerCase().contains(term) ||
+              e.description.toLowerCase().contains(term) ||
+              e.room.toLowerCase().contains(term))
+          .toList();
     }
     if (room != null) list = list.where((e) => e.room == room).toList();
     return InventoryPage(total: list.length, items: list);
@@ -202,9 +210,8 @@ void main() {
     await tester.pumpAndSettle();
 
     await _chooseRoom(tester, null);
-    await tester.enterText(find.byType(TextField), '100');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
+    await searchAndChoosePatrimony(tester, query: "Mesa", number: "100");
+    expect(repository.queries.last["query"], "Mesa");
 
     expect(repository.checked, ['100']);
     expect(find.text('Patrimônio 100 conferido.'), findsOneWidget);
@@ -217,21 +224,14 @@ void main() {
     await tester.pumpAndSettle();
 
     await _chooseRoom(tester, null);
-    final number = find.byType(TextField);
-    await tester.enterText(number, '100');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Conferência registrada'), findsOneWidget);
+    await searchAndChoosePatrimony(tester, query: "100", number: "100");
+    expect(find.textContaining("Conferência registrada"), findsOneWidget);
 
-    await tester.enterText(number, '100');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Duplicado'), findsOneWidget);
+    await searchAndChoosePatrimony(tester, query: "100", number: "100");
+    expect(find.textContaining("Duplicado"), findsOneWidget);
 
-    await tester.enterText(number, '999');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Não encontrado'), findsOneWidget);
+    await submitPatrimonyNumber(tester, "999");
+    expect(find.textContaining("Não encontrado"), findsOneWidget);
 
     expect(repository.checked, ['100', '100']);
     expect(find.text('3 resultados nesta sessão'), findsOneWidget);
@@ -245,9 +245,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await _chooseRoom(tester, null);
-    await tester.enterText(find.byType(TextField), '100');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
+    await searchAndChoosePatrimony(tester, query: "100", number: "100");
 
     expect(find.textContaining('Falha de rede'), findsOneWidget);
     expect(find.textContaining('Conferência registrada'), findsNothing);
@@ -267,12 +265,9 @@ void main() {
     await tester.pumpAndSettle();
 
     await _chooseRoom(tester, null);
-    final number = find.byType(TextField);
-    for (final value in ['100', '100', '999']) {
-      await tester.enterText(number, value);
-      await tester.tap(find.text('Pesquisar manualmente'));
-      await tester.pumpAndSettle();
-    }
+    await searchAndChoosePatrimony(tester, query: "100", number: "100");
+    await searchAndChoosePatrimony(tester, query: "100", number: "100");
+    await submitPatrimonyNumber(tester, "999");
 
     expect(feedback, [
       BatchFeedbackKind.success,
@@ -292,10 +287,8 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.enterText(find.byType(TextField), '100');
     await _chooseRoom(tester, null);
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
+    await searchAndChoosePatrimony(tester, query: "100", number: "100");
 
     expect(find.textContaining('Feedback sonoro indisponível'), findsOneWidget);
     expect(find.textContaining('Conferência registrada'), findsOneWidget);
@@ -325,9 +318,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await _chooseRoom(tester, null);
-    await tester.enterText(find.byType(TextField), '999');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
+    await submitPatrimonyNumber(tester, "999");
     expect(find.text('Patrimônio 999 não está no Inventário.'), findsOneWidget);
     expect(repository.checked, isEmpty);
 
@@ -363,9 +354,7 @@ void main() {
     await tester.tap(find.text('Conferir'));
     await tester.pumpAndSettle();
     await _chooseRoom(tester, null);
-    await tester.enterText(find.byType(TextField), '100');
-    await tester.tap(find.text('Pesquisar manualmente'));
-    await tester.pumpAndSettle();
+    await searchAndChoosePatrimony(tester, query: "100", number: "100");
     expect(find.textContaining('Sessão expirada'), findsOneWidget);
   });
 

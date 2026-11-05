@@ -179,7 +179,7 @@ class _WebConferenceReportPageState extends State<WebConferenceReportPage> {
             Icon(Icons.edit_note, color: primary),
             const SizedBox(width: 8),
             Text(
-              'Itens modificados',
+              'Patrimônios modificados',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -197,7 +197,7 @@ class _WebConferenceReportPageState extends State<WebConferenceReportPage> {
         else if (changes == null)
           const LinearProgressIndicator()
         else if (changes.isEmpty)
-          const Text('Nenhum item modificado.')
+          const Text('Nenhum patrimônio modificado.')
         else
           Card(
             margin: EdgeInsets.zero,

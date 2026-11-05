@@ -253,6 +253,8 @@ class _WebInventoryListState extends State<WebInventoryList> {
 
   @override
   Widget build(BuildContext context) {
+    final overall = _overall ?? _total;
+    final countLabel = overall == 1 ? 'patrimônio' : 'patrimônios';
     return Column(
       children: [
         Padding(
@@ -263,8 +265,7 @@ class _WebInventoryListState extends State<WebInventoryList> {
                 child: TextField(
                   controller: _search,
                   decoration: const InputDecoration(
-                    hintText:
-                        'Buscar por número, descrição, sala ou responsável',
+                    hintText: 'Buscar por número ou descrição',
                     prefixIcon: Icon(Icons.search),
                     border: OutlineInputBorder(),
                     isDense: true,
@@ -351,7 +352,7 @@ class _WebInventoryListState extends State<WebInventoryList> {
           padding: const EdgeInsets.all(16),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text('$_total de ${_overall ?? _total} itens'),
+            child: Text('$_total de $overall $countLabel'),
           ),
         ),
         Expanded(

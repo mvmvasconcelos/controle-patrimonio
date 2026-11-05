@@ -509,6 +509,7 @@ void main() {
     server.down = true;
     network.set(false);
     await repo.markChecked('101');
+    await repo.updateEntry('101', {'sala': 'Sala C'});
     final stats = await repo.localDataStats();
     expect(stats.total, 3);
     expect(stats.modified, 1);
@@ -517,13 +518,11 @@ void main() {
   test('resetLocalChanges drops pending changes and restores the server state',
       () async {
     server.down = true;
-    network.set(false);
     await repo.markChecked('101');
     await repo.updateEntry('100', {'sala': 'Direta'});
+    server.down = false;
     await repo.resetLocalChanges();
     expect(repo.syncStatus.pending, 0);
-    server.down = false;
-    network.set(true);
     await settle();
 
     expect(repo.syncStatus.pending, 0);
@@ -531,6 +530,25 @@ void main() {
     expect((await repo.fetchEntry('101'))!.checked, isFalse);
     expect((await repo.fetchEntry('100'))!.room, 'Sala A');
     expect((await repo.localDataStats()).modified, 0);
+  });
+
+  test('resetLocalChanges offline keeps pending changes and cached Patrimônios',
+      () async {
+    server.down = true;
+    network.set(false);
+    await repo.markChecked('101');
+
+    await expectLater(
+      repo.resetLocalChanges(),
+      throwsA(isA<StateError>().having(
+        (error) => error.message,
+        'message',
+        contains('conexão'),
+      )),
+    );
+
+    expect(repo.syncStatus.pending, 1);
+    expect((await repo.fetchEntry('101'))!.checked, isTrue);
   });
 
   test('clearLocalData empties entries and the queue', () async {
