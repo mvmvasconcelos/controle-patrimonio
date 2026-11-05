@@ -42,7 +42,9 @@ CMD ["sh", "-c", "flutter pub get && tail -f /dev/null"]
 FROM flutter-sdk AS web-builder
 
 COPY . /app
-RUN flutter pub get && flutter build web --release --no-web-resources-cdn --base-href /controle-patrimonio/
+RUN flutter pub get && flutter build web --release --no-web-resources-cdn --base-href /controle-patrimonio/ \
+    --dart-define=APP_VERSION="$(sed -n 's/^version: *//p' pubspec.yaml)" \
+    --dart-define=BUILD_DATE="$(date +%d/%m/%Y)"
 
 # O service worker do Flutter calcula a chave dos arquivos a partir da origem e
 # ignora o subcaminho do base-href: sem este ajuste ele nunca serve o shell do
