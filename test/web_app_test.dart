@@ -260,4 +260,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Total: 1'), findsOneWidget);
   });
+
+  testWidgets('menu Importar / Exportar abre a tela própria', (tester) async {
+    final repository = _FakeRepository('u', 'p');
+    await tester.pumpWidget(MyApp(webRepository: repository));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'u');
+    await tester.enterText(find.byType(TextField).at(1), 'p');
+    await tester.tap(find.text('Entrar'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Open navigation menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Importar / Exportar'));
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(AppBar, 'Importar / Exportar'), findsOneWidget);
+    expect(find.text('Gestão de dados'), findsNothing);
+  });
 }
