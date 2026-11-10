@@ -6,6 +6,7 @@ import '../services/offline/sync_status.dart';
 import '../services/web_inventory_repository.dart';
 import 'web_batch_conferencia_page.dart';
 import 'web_patrimony_pages.dart';
+import '../widgets/barcode_scanner_test.dart';
 
 /// Tela inicial após o login: resumo da Sincronização e atalhos.
 class WebHomePage extends StatefulWidget {
@@ -125,6 +126,14 @@ class _WebHomePageState extends State<WebHomePage> {
           icon: const Icon(Icons.list_alt),
           label: const Text('Ver Inventário'),
         ),
+        const SizedBox(height: 12),
+        // Debug: teste de câmera
+        if (const bool.fromEnvironment('TEST_CAMERA', defaultValue: false))
+          OutlinedButton.icon(
+            onPressed: () => _open(const BarcodeScannerTestScreen()),
+            icon: const Icon(Icons.bug_report),
+            label: const Text('[DEBUG] Teste Camera'),
+          ),
       ],
     );
   }

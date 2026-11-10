@@ -16,8 +16,19 @@ class BarcodeScannerScreen extends StatefulWidget {
 }
 
 class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
-  final MobileScannerController _controller = MobileScannerController();
+  late final MobileScannerController _controller;
   bool _hasScanned = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Configurar controller com detectionSpeed otimizado
+    // para melhorar a responsividade em cenários de foco variável.
+    // Issue: https://github.com/mvmvasconcelos/controle-patrimonio/issues/...
+    _controller = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+    );
+  }
 
   @override
   void dispose() {
@@ -77,6 +88,29 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.green, width: 3),
                 borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          // Instrução de uso
+          Positioned(
+            top: 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Enquadre o código e aguarde a leitura',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           ),
